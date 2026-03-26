@@ -8,20 +8,20 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { analyzeFrame, analyzeFrameSchema } from "./tools/analyze-frame.js";
+import { inspectLayout, inspectLayoutSchema } from "./tools/inspect-layout.js";
 import { extractDesignTokens, extractDesignTokensSchema } from "./tools/extract-design-tokens.js";
 import { mapToUnity, mapToUnitySchema } from "./tools/map-to-unity.js";
 
 const tools: Tool[] = [
   {
-    name: "analyze_frame",
+    name: "inspect_layout",
     description:
-      "Analyzes a Figma frame and returns structured information about its components, layouts, constraints, and accessibility warnings. Ideal for auditing design quality and generating platform-ready specs.",
+      "Inspects a Figma frame and returns deterministic layout data: node hierarchy, auto-layout vs absolute positioning, spacing, padding, constraints, and accessibility warnings (touch targets, font sizes). Output is a versioned JSON schema — stable and predictable for downstream tooling.",
     inputSchema: {
       type: "object",
       properties: {
         file_key: { type: "string", description: "The Figma file key (from the file URL)" },
-        node_id: { type: "string", description: "The node ID of the frame to analyze" },
+        node_id: { type: "string", description: "The node ID of the frame to inspect" },
         access_token: { type: "string", description: "Your Figma personal access token" },
       },
       required: ["file_key", "node_id", "access_token"],
@@ -30,7 +30,7 @@ const tools: Tool[] = [
   {
     name: "extract_design_tokens",
     description:
-      "Extracts all design tokens (colors, typography, spacing) from a Figma file and exports them in your chosen format: CSS custom properties, Style Dictionary JSON, or Tailwind config.",
+      "Extracts all design tokens (colors, typography, spacing) from a Figma file and exports them in your chosen format: CSS custom properties, Style Dictionary JSON, or Tailwind config. Each token includes source node IDs for traceability.",
     inputSchema: {
       type: "object",
       properties: {
@@ -41,10 +41,6 @@ const tools: Tool[] = [
           enum: ["style-dictionary", "css-variables", "tailwind"],
           description: "Output format for the exported tokens (default: css-variables)",
         },
-        include_styles: {
-          type: "boolean",
-          description: "Whether to include named Figma styles in extraction (default: true)",
-        },
       },
       required: ["file_key", "access_token"],
     },
@@ -52,7 +48,7 @@ const tools: Tool[] = [
   {
     name: "map_to_unity",
     description:
-      "Converts a Figma frame into a Unity UGUI hierarchy. Maps Figma constraints to RectTransform anchors, auto-layout to LayoutGroups, and infers appropriate Unity components (Image, TextMeshProUGUI, etc.).",
+      "Converts a Figma frame into a Unity UGUI hierarchy. Maps Figma constraints to RectTransform anchors, auto-layout to HorizontalLayoutGroup/VerticalLayoutGroup, and suggests appropriate Unity components per node type. Includes confidence scores for inferred components.",
     inputSchema: {
       type: "object",
       properties: {
@@ -68,7 +64,7 @@ const tools: Tool[] = [
 ];
 
 const server = new Server(
-  { name: "figma-dissect", version: "0.1.0" },
+  { name: "figma-spec", version: "0.1.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -79,9 +75,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "analyze_frame": {
-        const input = analyzeFrameSchema.parse(args);
-        const result = await analyzeFrame(input);
+      case "inspect_layout": {
+        const input = inspectLayoutSchema.parse(args);
+        const result = await inspectLayout(input);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "extract_design_tokens": {
@@ -89,7 +85,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const result = await extractDesignTokens(input);
         return {
           content: [
-            { type: "text", text: `Format: ${result.format}\n\nTokens summary:\n- Colors: ${result.colors.length}\n- Typography: ${result.typography.length}\n- Spacing: ${result.spacing.length}\n\n${result.exported}` },
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  schema: result.schema,
+                  format: result.format,
+                  cache: result.cache,
+                  summary: {
+                    colors: result.colors.length,
+                    typography: result.typography.length,
+                    spacing: result.spacing.length,
+                  },
+                  tokens: { colors: result.colors, typography: result.typography, spacing: result.spacing },
+                  exported: result.exported,
+                },
+                null,
+                2
+              ),
+            },
           ],
         };
       }

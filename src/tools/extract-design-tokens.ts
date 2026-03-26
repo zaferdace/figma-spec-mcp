@@ -17,11 +17,6 @@ export const extractDesignTokensSchema = z.object({
     .optional()
     .default("css-variables")
     .describe("Output format for the exported tokens"),
-  include_styles: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe("Whether to include named Figma styles in extraction"),
 });
 
 function colorToHex(color: Color): string {
@@ -46,34 +41,39 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function collectColors(node: FigmaNode, seen: Set<string>, tokens: ColorToken[]): void {
+function collectColors(node: FigmaNode, seen: Map<string, ColorToken>, nodeId: string): void {
   const allPaints: Paint[] = [...(node.fills ?? []), ...(node.strokes ?? [])];
 
   for (const paint of allPaints) {
     if (paint.type === "SOLID" && paint.color && paint.visible !== false) {
       const hex = colorToHex(paint.color);
-      if (!seen.has(hex)) {
-        seen.add(hex);
-        tokens.push({
+      const existing = seen.get(hex);
+      if (existing) {
+        existing.sourceNodeIds.push(nodeId);
+      } else {
+        seen.set(hex, {
           name: slugify(`color-${hex.slice(1)}`),
           value: colorToRgba(paint.color, paint.opacity ?? 1),
           hex,
           rgba: { r: paint.color.r, g: paint.color.g, b: paint.color.b, a: paint.color.a },
           opacity: paint.opacity ?? 1,
+          sourceNodeIds: [nodeId],
         });
       }
     }
   }
 
-  node.children?.forEach((child) => collectColors(child, seen, tokens));
+  node.children?.forEach((child) => collectColors(child, seen, child.id));
 }
 
-function collectTypography(node: FigmaNode, seen: Set<string>, tokens: TypographyToken[]): void {
+function collectTypography(node: FigmaNode, seen: Map<string, TypographyToken>): void {
   if (node.type === "TEXT" && node.style) {
     const key = `${node.style.fontFamily}-${node.style.fontSize}-${node.style.fontWeight}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      tokens.push({
+    const existing = seen.get(key);
+    if (existing) {
+      existing.sourceNodeIds.push(node.id);
+    } else {
+      seen.set(key, {
         name: slugify(`text-${node.style.fontFamily}-${node.style.fontSize}`),
         fontFamily: node.style.fontFamily,
         fontSize: node.style.fontSize,
@@ -81,15 +81,16 @@ function collectTypography(node: FigmaNode, seen: Set<string>, tokens: Typograph
         lineHeight: node.style.lineHeightPx,
         letterSpacing: node.style.letterSpacing,
         italic: node.style.italic ?? false,
+        sourceNodeIds: [node.id],
       });
     }
   }
 
-  node.children?.forEach((child) => collectTypography(child, seen, tokens));
+  node.children?.forEach((child) => collectTypography(child, seen));
 }
 
-function collectSpacing(node: FigmaNode, seen: Set<string>, tokens: SpacingToken[]): void {
-  const spacingValues = [
+function collectSpacing(node: FigmaNode, seen: Map<string, SpacingToken>): void {
+  const values = [
     node.paddingTop,
     node.paddingRight,
     node.paddingBottom,
@@ -97,15 +98,17 @@ function collectSpacing(node: FigmaNode, seen: Set<string>, tokens: SpacingToken
     node.itemSpacing,
   ].filter((v): v is number => v !== undefined && v > 0);
 
-  for (const value of spacingValues) {
+  for (const value of values) {
     const key = String(value);
-    if (!seen.has(key)) {
-      seen.add(key);
-      tokens.push({ name: `spacing-${value}`, value, unit: "px" });
+    const existing = seen.get(key);
+    if (existing) {
+      if (!existing.sourceNodeIds.includes(node.id)) existing.sourceNodeIds.push(node.id);
+    } else {
+      seen.set(key, { name: `spacing-${value}`, value, unit: "px", sourceNodeIds: [node.id] });
     }
   }
 
-  node.children?.forEach((child) => collectSpacing(child, seen, tokens));
+  node.children?.forEach((child) => collectSpacing(child, seen));
 }
 
 function exportAsCssVariables(colors: ColorToken[], typography: TypographyToken[], spacing: SpacingToken[]): string {
@@ -114,14 +117,12 @@ function exportAsCssVariables(colors: ColorToken[], typography: TypographyToken[
   for (const color of colors) {
     lines.push(`  --${color.name}: ${color.value};`);
   }
-
   for (const typo of typography) {
     lines.push(`  --${typo.name}-family: "${typo.fontFamily}";`);
     lines.push(`  --${typo.name}-size: ${typo.fontSize}px;`);
     lines.push(`  --${typo.name}-weight: ${typo.fontWeight};`);
-    if (typo.lineHeight) lines.push(`  --${typo.name}-line-height: ${typo.lineHeight}px;`);
+    if (typo.lineHeight !== undefined) lines.push(`  --${typo.name}-line-height: ${typo.lineHeight}px;`);
   }
-
   const sortedSpacing = [...spacing].sort((a, b) => a.value - b.value);
   for (const sp of sortedSpacing) {
     lines.push(`  --${sp.name}: ${sp.value}px;`);
@@ -137,13 +138,7 @@ function exportAsStyleDictionary(colors: ColorToken[], typography: TypographyTok
     typography: Object.fromEntries(
       typography.map((t) => [
         t.name,
-        {
-          value: {
-            fontFamily: t.fontFamily,
-            fontSize: `${t.fontSize}px`,
-            fontWeight: t.fontWeight,
-          },
-        },
+        { value: { fontFamily: t.fontFamily, fontSize: `${t.fontSize}px`, fontWeight: t.fontWeight } },
       ])
     ),
     spacing: Object.fromEntries(spacing.map((s) => [s.name, { value: `${s.value}px` }])),
@@ -164,17 +159,24 @@ function exportAsTailwind(colors: ColorToken[], typography: TypographyToken[], s
   return `module.exports = ${JSON.stringify(config, null, 2)};`;
 }
 
-export async function extractDesignTokens(input: ExtractDesignTokensInput): Promise<ExtractDesignTokensResult> {
-  const client = new FigmaClient(input.access_token);
-  const file = await client.getFile(input.file_key);
+export async function extractDesignTokens(
+  input: ExtractDesignTokensInput,
+  clientOptions?: { ttlMs?: number; disableCache?: boolean }
+): Promise<ExtractDesignTokensResult> {
+  const client = new FigmaClient(input.access_token, clientOptions);
+  const { data: file, cache } = await client.getFile(input.file_key);
 
-  const colors: ColorToken[] = [];
-  const typography: TypographyToken[] = [];
-  const spacing: SpacingToken[] = [];
+  const colorMap = new Map<string, ColorToken>();
+  const typographyMap = new Map<string, TypographyToken>();
+  const spacingMap = new Map<string, SpacingToken>();
 
-  collectColors(file.document, new Set(), colors);
-  collectTypography(file.document, new Set(), typography);
-  collectSpacing(file.document, new Set(), spacing);
+  collectColors(file.document, colorMap, file.document.id);
+  collectTypography(file.document, typographyMap);
+  collectSpacing(file.document, spacingMap);
+
+  const colors = Array.from(colorMap.values());
+  const typography = Array.from(typographyMap.values());
+  const spacing = Array.from(spacingMap.values());
 
   const format = input.export_format ?? "css-variables";
   let exported: string;
@@ -190,5 +192,5 @@ export async function extractDesignTokens(input: ExtractDesignTokensInput): Prom
       exported = exportAsCssVariables(colors, typography, spacing);
   }
 
-  return { colors, typography, spacing, exported, format };
+  return { schema: "figma-spec/extract-design-tokens@1", colors, typography, spacing, exported, format, cache };
 }

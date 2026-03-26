@@ -1,5 +1,5 @@
 {
-  "name": "figma-dissect",
+  "name": "figma-spec",
   "version": "0.1.0",
   "description": "Engineering-grade Figma audits and platform-ready specs for AI agents",
   "keywords": [
@@ -13,20 +13,20 @@
     "claude",
     "cursor"
   ],
-  "homepage": "https://github.com/zaferdace/figma-dissect",
+  "homepage": "https://github.com/zaferdace/figma-spec",
   "bugs": {
-    "url": "https://github.com/zaferdace/figma-dissect/issues"
+    "url": "https://github.com/zaferdace/figma-spec/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zaferdace/figma-dissect.git"
+    "url": "git+https://github.com/zaferdace/figma-spec.git"
   },
   "license": "MIT",
   "author": "Zafer Dace",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "figma-dissect": "dist/index.js"
+    "figma-spec": "dist/index.js"
   },
   "files": [
     "dist"

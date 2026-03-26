@@ -28,7 +28,6 @@ function figmaConstraintsToAnchor(
     LEFT_RIGHT: [0, 1],
     SCALE: [0, 1],
   };
-
   const vMap: Record<string, [number, number]> = {
     TOP: [1, 1],
     BOTTOM: [0, 0],
@@ -102,8 +101,11 @@ function buildLayoutGroup(node: FigmaNode): UnityLayoutGroup | undefined {
   };
 }
 
-function inferUnityComponents(node: FigmaNode): string[] {
+type ConfidenceLevel = "high" | "medium" | "low";
+
+function inferComponents(node: FigmaNode): { components: string[]; confidence: ConfidenceLevel } {
   const components: string[] = ["RectTransform"];
+  let confidence: ConfidenceLevel = "high";
 
   switch (node.type) {
     case "TEXT":
@@ -112,9 +114,7 @@ function inferUnityComponents(node: FigmaNode): string[] {
     case "FRAME":
     case "COMPONENT":
     case "INSTANCE":
-      if (node.fills && node.fills.length > 0) {
-        components.push("Image");
-      }
+      if (node.fills && node.fills.length > 0) components.push("Image");
       if (node.layoutMode && node.layoutMode !== "NONE") {
         components.push(node.layoutMode === "HORIZONTAL" ? "HorizontalLayoutGroup" : "VerticalLayoutGroup");
       }
@@ -126,10 +126,13 @@ function inferUnityComponents(node: FigmaNode): string[] {
     case "VECTOR":
     case "BOOLEAN_OPERATION":
       components.push("Image");
+      confidence = "medium";
       break;
+    default:
+      confidence = "low";
   }
 
-  return components;
+  return { components, confidence };
 }
 
 function convertNode(
@@ -141,50 +144,45 @@ function convertNode(
   warnings: string[]
 ): UnityNode {
   if (node.type === "VECTOR" || node.type === "BOOLEAN_OPERATION") {
-    notes.push(`Node "${node.name}" (${node.type}) — export as sprite for Unity Image component.`);
+    notes.push(`"${node.name}" (${node.type}) — export as sprite for Unity Image component.`);
   }
 
   if (node.effects && node.effects.length > 0) {
     const hasBlur = node.effects.some((e) => e.type === "LAYER_BLUR" || e.type === "BACKGROUND_BLUR");
     if (hasBlur) {
-      warnings.push(`Node "${node.name}" has blur effects — Unity UGUI does not natively support blur.`);
+      warnings.push(`"${node.name}" has blur effects — Unity UGUI does not natively support blur.`);
     }
   }
 
   const rectTransform = buildRectTransform(node, parentBounds, canvasWidth, canvasHeight);
   const layoutGroup = buildLayoutGroup(node);
-  const components = inferUnityComponents(node);
+  const { components: suggestedComponents, confidence } = inferComponents(node);
 
-  const unityNode: UnityNode = {
+  const children: UnityNode[] = (node.children ?? []).map((child) =>
+    convertNode(child, node.absoluteBoundingBox ?? null, canvasWidth, canvasHeight, notes, warnings)
+  );
+
+  return {
     name: node.name,
     figmaId: node.id,
     figmaType: node.type,
     rectTransform,
-    components,
-    children: [],
+    layoutGroup,
+    suggestedComponents,
+    confidence,
+    children,
   };
-
-  if (layoutGroup) {
-    unityNode.layoutGroup = layoutGroup;
-  }
-
-  if (node.children) {
-    for (const child of node.children) {
-      unityNode.children.push(
-        convertNode(child, node.absoluteBoundingBox ?? null, canvasWidth, canvasHeight, notes, warnings)
-      );
-    }
-  }
-
-  return unityNode;
 }
 
-export async function mapToUnity(input: MapToUnityInput): Promise<MapToUnityResult> {
-  const client = new FigmaClient(input.access_token);
+export async function mapToUnity(
+  input: MapToUnityInput,
+  clientOptions?: { ttlMs?: number; disableCache?: boolean }
+): Promise<MapToUnityResult> {
+  const client = new FigmaClient(input.access_token, clientOptions);
   const normalizedId = input.node_id.replace("-", ":");
   const response = await client.getFileNodes(input.file_key, [normalizedId]);
 
-  const nodeData = response.nodes[normalizedId];
+  const nodeData = response.data.nodes[normalizedId];
   if (!nodeData) {
     throw new Error(`Node "${input.node_id}" not found in file "${input.file_key}"`);
   }
@@ -197,9 +195,11 @@ export async function mapToUnity(input: MapToUnityInput): Promise<MapToUnityResu
   const rootNode = convertNode(nodeData.document, null, canvasWidth, canvasHeight, notes, warnings);
 
   return {
+    schema: "figma-spec/map-to-unity@1",
     rootNode,
     canvasSize: { width: canvasWidth, height: canvasHeight },
     notes,
     warnings,
+    cache: response.cache,
   };
 }
