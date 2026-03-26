@@ -1,0 +1,52 @@
+{
+  "name": "figma-dissect",
+  "version": "0.1.0",
+  "description": "Engineering-grade Figma audits and platform-ready specs for AI agents",
+  "keywords": [
+    "figma",
+    "mcp",
+    "model-context-protocol",
+    "design-tokens",
+    "unity",
+    "design-system",
+    "ai",
+    "claude",
+    "cursor"
+  ],
+  "homepage": "https://github.com/zaferdace/figma-dissect",
+  "bugs": {
+    "url": "https://github.com/zaferdace/figma-dissect/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaferdace/figma-dissect.git"
+  },
+  "license": "MIT",
+  "author": "Zafer Dace",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "figma-dissect": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@figma/rest-api-spec": "^0.36.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
