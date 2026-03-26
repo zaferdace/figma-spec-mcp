@@ -178,7 +178,7 @@ export async function extractDesignTokens(
   const typography = Array.from(typographyMap.values());
   const spacing = Array.from(spacingMap.values());
 
-  const format = input.export_format ?? "css-variables";
+  const format = input.export_format;
   let exported: string;
 
   switch (format) {
@@ -192,5 +192,17 @@ export async function extractDesignTokens(
       exported = exportAsCssVariables(colors, typography, spacing);
   }
 
-  return { schema: "figma-spec/extract-design-tokens@1", colors, typography, spacing, exported, format, cache };
+  const resolvedFormat = format ?? "css-variables";
+
+  return {
+    schema_version: "0.1.0",
+    source: { file_key: input.file_key },
+    freshness: {
+      cached: cache.fresh,
+      timestamp: cache.cachedAt,
+      ttl_ms: new Date(cache.expiresAt).getTime() - new Date(cache.cachedAt).getTime(),
+    },
+    warnings: [],
+    data: { colors, typography, spacing, exported, format: resolvedFormat, cache },
+  };
 }

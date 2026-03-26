@@ -4,9 +4,11 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
-**Engineering-grade Figma audits and platform-ready specs for AI agents.**
+**An MCP server for AI agents that reads Figma files and returns structured, versioned specs — layout facts, design tokens, and Unity UGUI mappings. It does not generate UI code or infer semantic component roles.**
 
-`figma-spec` is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI agents (Claude, Cursor, etc.) structured, versioned access to Figma files — deterministic layout data, extracted design tokens, and Unity UGUI hierarchies, with a built-in disk cache to avoid Figma API rate limits.
+`figma-spec` gives AI agents (Claude, Cursor, etc.) deterministic access to Figma files: layout data, extracted design tokens, and Unity UGUI hierarchies, with a built-in disk cache to avoid Figma API rate limits.
+
+> **Security note:** Your Figma access token is passed as a tool argument. Never commit it to version control. Use environment variables or your AI client's secret management to supply it at runtime.
 
 ---
 
@@ -94,7 +96,7 @@ Returns deterministic layout data for a Figma frame: node hierarchy, auto-layout
 
 ### `extract_design_tokens`
 
-Extracts colors, typography, and spacing from an entire Figma file and exports them in your chosen format. Every token includes `sourceNodeIds` for traceability.
+Extracts colors, typography, and spacing from an entire Figma file and exports them in your chosen format. Every token includes `sourceNodeIds` for traceability. Spacing tokens are derived from auto-layout `padding` and `itemSpacing` values — they are not named Figma styles.
 
 **Input:**
 ```json

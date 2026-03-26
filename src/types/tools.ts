@@ -2,6 +2,16 @@ import type { CacheMetadata } from "../figma/client.js";
 
 export type { CacheMetadata };
 
+// ─── Shared response envelope ─────────────────────────────────────────────────
+
+export interface ResponseEnvelope<T> {
+  schema_version: "0.1.0";
+  source: { file_key: string; node_id?: string };
+  freshness: { cached: boolean; timestamp: string; ttl_ms: number };
+  warnings: string[];
+  data: T;
+}
+
 // ─── inspect_layout ───────────────────────────────────────────────────────────
 
 export interface InspectLayoutInput {
@@ -47,8 +57,7 @@ export interface AccessibilityWarning {
   evidence: string;
 }
 
-export interface InspectLayoutResult {
-  schema: "figma-spec/inspect-layout@1";
+export interface InspectLayoutData {
   frameId: string;
   frameName: string;
   dimensions: { width: number; height: number };
@@ -64,6 +73,8 @@ export interface InspectLayoutResult {
   };
   cache: CacheMetadata;
 }
+
+export type InspectLayoutResult = ResponseEnvelope<InspectLayoutData>;
 
 // ─── extract_design_tokens ────────────────────────────────────────────────────
 
@@ -100,8 +111,7 @@ export interface SpacingToken {
   sourceNodeIds: string[];
 }
 
-export interface ExtractDesignTokensResult {
-  schema: "figma-spec/extract-design-tokens@1";
+export interface ExtractDesignTokensData {
   colors: ColorToken[];
   typography: TypographyToken[];
   spacing: SpacingToken[];
@@ -109,6 +119,8 @@ export interface ExtractDesignTokensResult {
   format: "style-dictionary" | "css-variables" | "tailwind";
   cache: CacheMetadata;
 }
+
+export type ExtractDesignTokensResult = ResponseEnvelope<ExtractDesignTokensData>;
 
 // ─── map_to_unity ─────────────────────────────────────────────────────────────
 
@@ -148,11 +160,11 @@ export interface UnityNode {
   children: UnityNode[];
 }
 
-export interface MapToUnityResult {
-  schema: "figma-spec/map-to-unity@1";
+export interface MapToUnityData {
   rootNode: UnityNode;
   canvasSize: { width: number; height: number };
   notes: string[];
-  warnings: string[];
   cache: CacheMetadata;
 }
+
+export type MapToUnityResult = ResponseEnvelope<MapToUnityData>;

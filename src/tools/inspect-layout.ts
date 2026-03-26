@@ -117,7 +117,7 @@ export async function inspectLayout(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<InspectLayoutResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedId = input.node_id.replace("-", ":");
+  const normalizedId = input.node_id.replace(/-/g, ":");
   const response = await client.getFileNodes(input.file_key, [normalizedId]);
 
   const nodeData = response.data.nodes[normalizedId];
@@ -139,23 +139,32 @@ export async function inspectLayout(
   const autoLayoutNodeIds = new Set(autoLayouts.map((l) => l.nodeId));
 
   return {
-    schema: "figma-spec/inspect-layout@1",
-    frameId: frame.id,
-    frameName: frame.name,
-    dimensions: {
-      width: frame.absoluteBoundingBox?.width ?? 0,
-      height: frame.absoluteBoundingBox?.height ?? 0,
+    schema_version: "0.1.0",
+    source: { file_key: input.file_key, node_id: input.node_id },
+    freshness: {
+      cached: response.cache.fresh,
+      timestamp: response.cache.cachedAt,
+      ttl_ms: new Date(response.cache.expiresAt).getTime() - new Date(response.cache.cachedAt).getTime(),
     },
-    hierarchy,
-    autoLayouts,
-    constraints,
-    accessibilityWarnings,
-    stats: {
-      totalNodes: hierarchy.length,
-      autoLayoutNodes: autoLayoutNodeIds.size,
-      absoluteNodes: hierarchy.length - autoLayoutNodeIds.size,
-      textNodeCount: hierarchy.filter((n) => n.type === "TEXT").length,
+    warnings: [],
+    data: {
+      frameId: frame.id,
+      frameName: frame.name,
+      dimensions: {
+        width: frame.absoluteBoundingBox?.width ?? 0,
+        height: frame.absoluteBoundingBox?.height ?? 0,
+      },
+      hierarchy,
+      autoLayouts,
+      constraints,
+      accessibilityWarnings,
+      stats: {
+        totalNodes: hierarchy.length,
+        autoLayoutNodes: autoLayoutNodeIds.size,
+        absoluteNodes: hierarchy.length - autoLayoutNodeIds.size,
+        textNodeCount: hierarchy.filter((n) => n.type === "TEXT").length,
+      },
+      cache: response.cache,
     },
-    cache: response.cache,
   };
 }

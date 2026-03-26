@@ -11,33 +11,42 @@ import type {
 
 export const mapToUnitySchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
-  node_id: z.string().describe("The node ID of the frame to convert"),
+  node_id: z.string().describe("The node ID of the frame to produce a Unity mapping spec for"),
   access_token: z.string().describe("Your Figma personal access token"),
   canvas_width: z.number().optional().default(1080).describe("Target Unity canvas width in pixels"),
   canvas_height: z.number().optional().default(1920).describe("Target Unity canvas height in pixels"),
 });
 
+const H_ANCHOR_MAP: Record<string, [number, number]> = {
+  LEFT: [0, 0],
+  RIGHT: [1, 1],
+  CENTER: [0.5, 0.5],
+  LEFT_RIGHT: [0, 1],
+  SCALE: [0, 1],
+};
+
+const V_ANCHOR_MAP: Record<string, [number, number]> = {
+  TOP: [1, 1],
+  BOTTOM: [0, 0],
+  CENTER: [0.5, 0.5],
+  TOP_BOTTOM: [0, 1],
+  SCALE: [0, 1],
+};
+
 function figmaConstraintsToAnchor(
   horizontal: string,
-  vertical: string
+  vertical: string,
+  warnings: string[],
+  nodeName: string
 ): { anchorMin: { x: number; y: number }; anchorMax: { x: number; y: number } } {
-  const hMap: Record<string, [number, number]> = {
-    LEFT: [0, 0],
-    RIGHT: [1, 1],
-    CENTER: [0.5, 0.5],
-    LEFT_RIGHT: [0, 1],
-    SCALE: [0, 1],
-  };
-  const vMap: Record<string, [number, number]> = {
-    TOP: [1, 1],
-    BOTTOM: [0, 0],
-    CENTER: [0.5, 0.5],
-    TOP_BOTTOM: [0, 1],
-    SCALE: [0, 1],
-  };
+  const hEntry = H_ANCHOR_MAP[horizontal];
+  const vEntry = V_ANCHOR_MAP[vertical];
 
-  const [hMin, hMax] = hMap[horizontal] ?? [0, 0];
-  const [vMin, vMax] = vMap[vertical] ?? [1, 1];
+  if (!hEntry) warnings.push(`"${nodeName}": unknown horizontal constraint "${horizontal}" — defaulted to LEFT.`);
+  if (!vEntry) warnings.push(`"${nodeName}": unknown vertical constraint "${vertical}" — defaulted to TOP.`);
+
+  const [hMin, hMax] = hEntry ?? [0, 0];
+  const [vMin, vMax] = vEntry ?? [1, 1];
 
   return {
     anchorMin: { x: hMin, y: vMin },
@@ -49,12 +58,13 @@ function buildRectTransform(
   node: FigmaNode,
   parentBounds: { x: number; y: number; width: number; height: number } | null,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  warnings: string[]
 ): UnityRectTransform {
   const bounds = node.absoluteBoundingBox ?? { x: 0, y: 0, width: 100, height: 100 };
   const horizontal = node.constraints?.horizontal ?? "LEFT";
   const vertical = node.constraints?.vertical ?? "TOP";
-  const { anchorMin, anchorMax } = figmaConstraintsToAnchor(horizontal, vertical);
+  const { anchorMin, anchorMax } = figmaConstraintsToAnchor(horizontal, vertical, warnings, node.name);
 
   const refWidth = parentBounds?.width ?? canvasWidth;
   const refHeight = parentBounds?.height ?? canvasHeight;
@@ -86,8 +96,10 @@ function buildLayoutGroup(node: FigmaNode): UnityLayoutGroup | undefined {
     SPACE_BETWEEN: "UpperLeft",
   };
 
+  const isHorizontal = node.layoutMode === "HORIZONTAL";
+
   return {
-    type: node.layoutMode === "HORIZONTAL" ? "HorizontalLayoutGroup" : "VerticalLayoutGroup",
+    type: isHorizontal ? "HorizontalLayoutGroup" : "VerticalLayoutGroup",
     spacing: node.itemSpacing ?? 0,
     padding: {
       top: node.paddingTop ?? 0,
@@ -96,8 +108,13 @@ function buildLayoutGroup(node: FigmaNode): UnityLayoutGroup | undefined {
       left: node.paddingLeft ?? 0,
     },
     childAlignment: alignMap[node.primaryAxisAlignItems ?? "MIN"] ?? "UpperLeft",
-    controlWidth: node.primaryAxisSizingMode === "AUTO",
-    controlHeight: node.counterAxisSizingMode === "AUTO",
+    // primaryAxis controls the layout direction; counterAxis controls the cross axis
+    controlWidth: isHorizontal
+      ? node.primaryAxisSizingMode === "AUTO"
+      : node.counterAxisSizingMode === "AUTO",
+    controlHeight: isHorizontal
+      ? node.counterAxisSizingMode === "AUTO"
+      : node.primaryAxisSizingMode === "AUTO",
   };
 }
 
@@ -135,7 +152,7 @@ function inferComponents(node: FigmaNode): { components: string[]; confidence: C
   return { components, confidence };
 }
 
-function convertNode(
+function mapNode(
   node: FigmaNode,
   parentBounds: { x: number; y: number; width: number; height: number } | null,
   canvasWidth: number,
@@ -154,12 +171,12 @@ function convertNode(
     }
   }
 
-  const rectTransform = buildRectTransform(node, parentBounds, canvasWidth, canvasHeight);
+  const rectTransform = buildRectTransform(node, parentBounds, canvasWidth, canvasHeight, warnings);
   const layoutGroup = buildLayoutGroup(node);
   const { components: suggestedComponents, confidence } = inferComponents(node);
 
   const children: UnityNode[] = (node.children ?? []).map((child) =>
-    convertNode(child, node.absoluteBoundingBox ?? null, canvasWidth, canvasHeight, notes, warnings)
+    mapNode(child, node.absoluteBoundingBox ?? null, canvasWidth, canvasHeight, notes, warnings)
   );
 
   return {
@@ -179,7 +196,7 @@ export async function mapToUnity(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<MapToUnityResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedId = input.node_id.replace("-", ":");
+  const normalizedId = input.node_id.replace(/-/g, ":");
   const response = await client.getFileNodes(input.file_key, [normalizedId]);
 
   const nodeData = response.data.nodes[normalizedId];
@@ -192,14 +209,22 @@ export async function mapToUnity(
   const notes: string[] = [];
   const warnings: string[] = [];
 
-  const rootNode = convertNode(nodeData.document, null, canvasWidth, canvasHeight, notes, warnings);
+  const rootNode = mapNode(nodeData.document, null, canvasWidth, canvasHeight, notes, warnings);
 
   return {
-    schema: "figma-spec/map-to-unity@1",
-    rootNode,
-    canvasSize: { width: canvasWidth, height: canvasHeight },
-    notes,
+    schema_version: "0.1.0",
+    source: { file_key: input.file_key, node_id: input.node_id },
+    freshness: {
+      cached: response.cache.fresh,
+      timestamp: response.cache.cachedAt,
+      ttl_ms: new Date(response.cache.expiresAt).getTime() - new Date(response.cache.cachedAt).getTime(),
+    },
     warnings,
-    cache: response.cache,
+    data: {
+      rootNode,
+      canvasSize: { width: canvasWidth, height: canvasHeight },
+      notes,
+      cache: response.cache,
+    },
   };
 }

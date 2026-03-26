@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { inspectLayout, inspectLayoutSchema } from "./tools/inspect-layout.js";
 import { extractDesignTokens, extractDesignTokensSchema } from "./tools/extract-design-tokens.js";
 import { mapToUnity, mapToUnitySchema } from "./tools/map-to-unity.js";
@@ -16,50 +16,20 @@ const tools: Tool[] = [
   {
     name: "inspect_layout",
     description:
-      "Inspects a Figma frame and returns deterministic layout data: node hierarchy, auto-layout vs absolute positioning, spacing, padding, constraints, and accessibility warnings (touch targets, font sizes). Output is a versioned JSON schema — stable and predictable for downstream tooling.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file_key: { type: "string", description: "The Figma file key (from the file URL)" },
-        node_id: { type: "string", description: "The node ID of the frame to inspect" },
-        access_token: { type: "string", description: "Your Figma personal access token" },
-      },
-      required: ["file_key", "node_id", "access_token"],
-    },
+      "Inspects a Figma frame and returns deterministic layout data: node hierarchy, auto-layout vs absolute positioning, spacing, padding, constraints, and accessibility warnings (touch targets, font sizes). Output is a versioned JSON envelope — stable and predictable for downstream tooling.",
+    inputSchema: zodToJsonSchema(inspectLayoutSchema) as Tool["inputSchema"],
   },
   {
     name: "extract_design_tokens",
     description:
-      "Extracts all design tokens (colors, typography, spacing) from a Figma file and exports them in your chosen format: CSS custom properties, Style Dictionary JSON, or Tailwind config. Each token includes source node IDs for traceability.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file_key: { type: "string", description: "The Figma file key (from the file URL)" },
-        access_token: { type: "string", description: "Your Figma personal access token" },
-        export_format: {
-          type: "string",
-          enum: ["style-dictionary", "css-variables", "tailwind"],
-          description: "Output format for the exported tokens (default: css-variables)",
-        },
-      },
-      required: ["file_key", "access_token"],
-    },
+      "Extracts all design tokens (colors, typography, spacing) from a Figma file and exports them in your chosen format: CSS custom properties (DTCG-aligned), Style Dictionary JSON, or Tailwind config. Spacing tokens are sourced from auto-layout padding and gap values. Each token includes source node IDs for traceability.",
+    inputSchema: zodToJsonSchema(extractDesignTokensSchema) as Tool["inputSchema"],
   },
   {
     name: "map_to_unity",
     description:
-      "Converts a Figma frame into a Unity UGUI hierarchy. Maps Figma constraints to RectTransform anchors, auto-layout to HorizontalLayoutGroup/VerticalLayoutGroup, and suggests appropriate Unity components per node type. Includes confidence scores for inferred components.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file_key: { type: "string", description: "The Figma file key (from the file URL)" },
-        node_id: { type: "string", description: "The node ID of the frame to convert" },
-        access_token: { type: "string", description: "Your Figma personal access token" },
-        canvas_width: { type: "number", description: "Target Unity canvas width in pixels (default: 1080)" },
-        canvas_height: { type: "number", description: "Target Unity canvas height in pixels (default: 1920)" },
-      },
-      required: ["file_key", "node_id", "access_token"],
-    },
+      "Produces a Unity UGUI mapping spec from a Figma frame. Maps Figma constraints to RectTransform anchors, auto-layout to HorizontalLayoutGroup/VerticalLayoutGroup, and suggests appropriate Unity components per node type. Includes confidence scores for inferred components and warnings for unknown constraints or unsupported effects.",
+    inputSchema: zodToJsonSchema(mapToUnitySchema) as Tool["inputSchema"],
   },
 ];
 
@@ -83,29 +53,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "extract_design_tokens": {
         const input = extractDesignTokensSchema.parse(args);
         const result = await extractDesignTokens(input);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  schema: result.schema,
-                  format: result.format,
-                  cache: result.cache,
-                  summary: {
-                    colors: result.colors.length,
-                    typography: result.typography.length,
-                    spacing: result.spacing.length,
-                  },
-                  tokens: { colors: result.colors, typography: result.typography, spacing: result.spacing },
-                  exported: result.exported,
-                },
-                null,
-                2
-              ),
-            },
-          ],
-        };
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "map_to_unity": {
         const input = mapToUnitySchema.parse(args);
@@ -116,9 +64,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const messages = error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ");
-      throw new Error(`Invalid input: ${messages}`);
+    if (error instanceof Error && error.name === "ZodError") {
+      throw new Error(`Invalid input: ${error.message}`);
     }
     throw error;
   }
