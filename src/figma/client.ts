@@ -100,6 +100,16 @@ export class FigmaClient {
     };
   }
 
+  private buildFreshMetadata(fileVersion: string): CacheMetadata {
+    const now = Date.now();
+    return {
+      cachedAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + this.ttlMs).toISOString(),
+      fileVersion,
+      fresh: true,
+    };
+  }
+
   private async request<T>(path: string): Promise<T> {
     const response = await fetch(`${FIGMA_API_BASE}${path}`, {
       headers: { "X-Figma-Token": this.accessToken },
@@ -123,8 +133,9 @@ export class FigmaClient {
 
     const data = await this.request<FigmaFileResponse>(`/files/${fileKey}`);
     this.writeCache(key, data, data.version);
-    const entry = this.readCache<FigmaFileResponse>(key)!;
-    return { data, cache: this.buildCacheMetadata(entry) };
+    const entry = this.readCache<FigmaFileResponse>(key);
+    const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata(data.version);
+    return { data, cache };
   }
 
   async getFileNodes(
@@ -147,8 +158,9 @@ export class FigmaClient {
 
     const version = fileVersion ?? "unknown";
     this.writeCache(key, data, version);
-    const entry = this.readCache<{ nodes: Record<string, { document: FigmaNode }> }>(key)!;
-    return { data, cache: this.buildCacheMetadata(entry) };
+    const entry = this.readCache<{ nodes: Record<string, { document: FigmaNode }> }>(key);
+    const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata(version);
+    return { data, cache };
   }
 
   async getStyles(fileKey: string): Promise<CachedResult<{ styles: Record<string, unknown> }>> {
@@ -161,7 +173,8 @@ export class FigmaClient {
 
     const data = await this.request<{ styles: Record<string, unknown> }>(`/files/${fileKey}/styles`);
     this.writeCache(key, data, "unknown");
-    const entry = this.readCache<{ styles: Record<string, unknown> }>(key)!;
-    return { data, cache: this.buildCacheMetadata(entry) };
+    const entry = this.readCache<{ styles: Record<string, unknown> }>(key);
+    const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata("unknown");
+    return { data, cache };
   }
 }

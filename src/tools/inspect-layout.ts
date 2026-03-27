@@ -34,9 +34,6 @@ function walkHierarchy(node: FigmaNode, depth: number, results: NodeSummary[]): 
 
 function collectAutoLayouts(node: FigmaNode, results: LayoutInfo[]): void {
   if (node.layoutMode && node.layoutMode !== "NONE") {
-    const primary = node.primaryAxisSizingMode;
-    const counter = node.counterAxisSizingMode;
-
     results.push({
       nodeId: node.id,
       nodeName: node.name,
@@ -51,8 +48,8 @@ function collectAutoLayouts(node: FigmaNode, results: LayoutInfo[]): void {
       },
       gap: node.itemSpacing ?? 0,
       sizing: {
-        width: primary === "AUTO" ? "hug" : "fixed",
-        height: counter === "AUTO" ? "hug" : "fixed",
+        width: node.primaryAxisSizingMode === "AUTO" ? "hug" : "fixed",
+        height: node.counterAxisSizingMode === "AUTO" ? "hug" : "fixed",
       },
     });
   }
