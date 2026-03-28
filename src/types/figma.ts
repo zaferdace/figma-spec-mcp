@@ -3,6 +3,7 @@ export interface FigmaNode {
   name: string;
   type: string;
   children?: FigmaNode[];
+  styles?: Record<string, string>;
   absoluteBoundingBox?: BoundingBox;
   constraints?: Constraints;
   layoutMode?: "NONE" | "HORIZONTAL" | "VERTICAL";
@@ -22,6 +23,12 @@ export interface FigmaNode {
   cornerRadius?: number;
   style?: TypeStyle;
   characters?: string;
+  characterStyleOverrides?: number[];
+  styleOverrideTable?: Record<string, TypeStyle>;
+  annotations?: Array<{
+    label: string;
+    properties: Array<{ type: string; value?: string }>;
+  }>;
 }
 
 export interface BoundingBox {

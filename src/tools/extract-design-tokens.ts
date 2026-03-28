@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
-import type { FigmaNode, Color, Paint } from "../types/figma.js";
+import type { FigmaNode, Color, Paint, StyleMetadata } from "../types/figma.js";
 import type {
   ExtractDesignTokensInput,
   ExtractDesignTokensResult,
@@ -41,40 +41,106 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function collectColors(node: FigmaNode, seen: Map<string, ColorToken>, nodeId: string): void {
-  const allPaints: Paint[] = [...(node.fills ?? []), ...(node.strokes ?? [])];
+function toExportTokenName(name: string): string {
+  return slugify(name);
+}
 
-  for (const paint of allPaints) {
+function resolveStyleName(styleId: string | undefined, styles: Record<string, StyleMetadata>): string | undefined {
+  if (!styleId) {
+    return undefined;
+  }
+
+  return styles[styleId]?.name;
+}
+
+function addColorToken(
+  seen: Map<string, ColorToken>,
+  paint: Paint,
+  nodeId: string,
+  tokenKey: string,
+  tokenName: string,
+  figmaStyleName?: string
+): void {
+  const hex = colorToHex(paint.color as Color);
+  const existing = seen.get(tokenKey);
+  if (existing) {
+    if (!existing.sourceNodeIds.includes(nodeId)) {
+      existing.sourceNodeIds.push(nodeId);
+    }
+    return;
+  }
+
+  seen.set(tokenKey, {
+    name: tokenName,
+    figmaStyleName,
+    value: colorToRgba(paint.color as Color, paint.opacity ?? 1),
+    hex,
+    rgba: {
+      r: (paint.color as Color).r,
+      g: (paint.color as Color).g,
+      b: (paint.color as Color).b,
+      a: (paint.color as Color).a,
+    },
+    opacity: paint.opacity ?? 1,
+    sourceNodeIds: [nodeId],
+  });
+}
+
+function collectColors(
+  node: FigmaNode,
+  seen: Map<string, ColorToken>,
+  styles: Record<string, StyleMetadata>,
+  nodeId: string
+): void {
+  const fillStyleId = node.styles?.["fill"] ?? node.styles?.["fills"];
+  const fillStyleName = resolveStyleName(fillStyleId, styles);
+  const fills: Paint[] = node.fills ?? [];
+  const strokes: Paint[] = node.strokes ?? [];
+
+  for (const paint of fills) {
     if (paint.type === "SOLID" && paint.color && paint.visible !== false) {
       const hex = colorToHex(paint.color);
-      const existing = seen.get(hex);
-      if (existing) {
-        existing.sourceNodeIds.push(nodeId);
-      } else {
-        seen.set(hex, {
-          name: slugify(`color-${hex.slice(1)}`),
-          value: colorToRgba(paint.color, paint.opacity ?? 1),
-          hex,
-          rgba: { r: paint.color.r, g: paint.color.g, b: paint.color.b, a: paint.color.a },
-          opacity: paint.opacity ?? 1,
-          sourceNodeIds: [nodeId],
-        });
-      }
+      addColorToken(
+        seen,
+        paint,
+        nodeId,
+        fillStyleId ? `style:${fillStyleId}` : `hex:${hex}`,
+        fillStyleName ?? slugify(`color-${hex.slice(1)}`),
+        fillStyleName
+      );
     }
   }
 
-  node.children?.forEach((child) => collectColors(child, seen, child.id));
+  for (const paint of strokes) {
+    if (paint.type === "SOLID" && paint.color && paint.visible !== false) {
+      const hex = colorToHex(paint.color);
+      addColorToken(seen, paint, nodeId, `hex:${hex}`, slugify(`color-${hex.slice(1)}`));
+    }
+  }
+
+  node.children?.forEach((child) => collectColors(child, seen, styles, child.id));
 }
 
-function collectTypography(node: FigmaNode, seen: Map<string, TypographyToken>): void {
+function collectTypography(
+  node: FigmaNode,
+  seen: Map<string, TypographyToken>,
+  styles: Record<string, StyleMetadata>
+): void {
   if (node.type === "TEXT" && node.style) {
-    const key = `${node.style.fontFamily}-${node.style.fontSize}-${node.style.fontWeight}`;
+    const textStyleId = node.styles?.["text"];
+    const textStyleName = resolveStyleName(textStyleId, styles);
+    const key = textStyleId
+      ? `style:${textStyleId}`
+      : `${node.style.fontFamily}-${node.style.fontSize}-${node.style.fontWeight}`;
     const existing = seen.get(key);
     if (existing) {
-      existing.sourceNodeIds.push(node.id);
+      if (!existing.sourceNodeIds.includes(node.id)) {
+        existing.sourceNodeIds.push(node.id);
+      }
     } else {
       seen.set(key, {
-        name: slugify(`text-${node.style.fontFamily}-${node.style.fontSize}`),
+        name: textStyleName ?? slugify(`text-${node.style.fontFamily}-${node.style.fontSize}`),
+        figmaStyleName: textStyleName,
         fontFamily: node.style.fontFamily,
         fontSize: node.style.fontSize,
         fontWeight: node.style.fontWeight,
@@ -86,7 +152,7 @@ function collectTypography(node: FigmaNode, seen: Map<string, TypographyToken>):
     }
   }
 
-  node.children?.forEach((child) => collectTypography(child, seen));
+  node.children?.forEach((child) => collectTypography(child, seen, styles));
 }
 
 function collectSpacing(node: FigmaNode, seen: Map<string, SpacingToken>): void {
@@ -115,13 +181,31 @@ function exportAsCssVariables(colors: ColorToken[], typography: TypographyToken[
   const lines: string[] = [":root {"];
 
   for (const color of colors) {
-    lines.push(`  --${color.name}: ${color.value};`);
+    const tokenName = toExportTokenName(color.name);
+    const mapping = color.figmaStyleName ? ` /* ${color.figmaStyleName} -> var(--${tokenName}, ${color.value}) */` : "";
+    lines.push(`  --${tokenName}: ${color.value};${mapping}`);
   }
   for (const typo of typography) {
-    lines.push(`  --${typo.name}-family: "${typo.fontFamily}";`);
-    lines.push(`  --${typo.name}-size: ${typo.fontSize}px;`);
-    lines.push(`  --${typo.name}-weight: ${typo.fontWeight};`);
-    if (typo.lineHeight !== undefined) lines.push(`  --${typo.name}-line-height: ${typo.lineHeight}px;`);
+    const tokenName = toExportTokenName(typo.name);
+    const familyValue = `"${typo.fontFamily}"`;
+    const familyMapping = typo.figmaStyleName
+      ? ` /* ${typo.figmaStyleName} -> var(--${tokenName}-family, ${familyValue}) */`
+      : "";
+    const sizeMapping = typo.figmaStyleName
+      ? ` /* ${typo.figmaStyleName} -> var(--${tokenName}-size, ${typo.fontSize}px) */`
+      : "";
+    const weightMapping = typo.figmaStyleName
+      ? ` /* ${typo.figmaStyleName} -> var(--${tokenName}-weight, ${typo.fontWeight}) */`
+      : "";
+    lines.push(`  --${tokenName}-family: ${familyValue};${familyMapping}`);
+    lines.push(`  --${tokenName}-size: ${typo.fontSize}px;${sizeMapping}`);
+    lines.push(`  --${tokenName}-weight: ${typo.fontWeight};${weightMapping}`);
+    if (typo.lineHeight !== undefined) {
+      const lineHeightMapping = typo.figmaStyleName
+        ? ` /* ${typo.figmaStyleName} -> var(--${tokenName}-line-height, ${typo.lineHeight}px) */`
+        : "";
+      lines.push(`  --${tokenName}-line-height: ${typo.lineHeight}px;${lineHeightMapping}`);
+    }
   }
   const sortedSpacing = [...spacing].sort((a, b) => a.value - b.value);
   for (const sp of sortedSpacing) {
@@ -134,10 +218,15 @@ function exportAsCssVariables(colors: ColorToken[], typography: TypographyToken[
 
 function exportAsStyleDictionary(colors: ColorToken[], typography: TypographyToken[], spacing: SpacingToken[]): string {
   const tokens: Record<string, unknown> = {
-    color: Object.fromEntries(colors.map((c) => [c.name, { value: c.value, attributes: { hex: c.hex } }])),
+    color: Object.fromEntries(
+      colors.map((c) => [
+        toExportTokenName(c.name),
+        { value: c.value, attributes: { hex: c.hex, figmaStyleName: c.figmaStyleName } },
+      ])
+    ),
     typography: Object.fromEntries(
       typography.map((t) => [
-        t.name,
+        toExportTokenName(t.name),
         { value: { fontFamily: t.fontFamily, fontSize: `${t.fontSize}px`, fontWeight: t.fontWeight } },
       ])
     ),
@@ -150,8 +239,10 @@ function exportAsTailwind(colors: ColorToken[], typography: TypographyToken[], s
   const config = {
     theme: {
       extend: {
-        colors: Object.fromEntries(colors.map((c) => [c.name, c.hex])),
-        fontFamily: Object.fromEntries(typography.map((t) => [slugify(t.fontFamily), [t.fontFamily, "sans-serif"]])),
+        colors: Object.fromEntries(colors.map((c) => [toExportTokenName(c.name), c.hex])),
+        fontFamily: Object.fromEntries(
+          typography.map((t) => [toExportTokenName(t.name), [t.fontFamily, "sans-serif"]])
+        ),
         spacing: Object.fromEntries(spacing.map((s) => [s.name, `${s.value}px`])),
       },
     },
@@ -170,8 +261,8 @@ export async function extractDesignTokens(
   const typographyMap = new Map<string, TypographyToken>();
   const spacingMap = new Map<string, SpacingToken>();
 
-  collectColors(file.document, colorMap, file.document.id);
-  collectTypography(file.document, typographyMap);
+  collectColors(file.document, colorMap, file.styles, file.document.id);
+  collectTypography(file.document, typographyMap, file.styles);
   collectSpacing(file.document, spacingMap);
 
   const colors = Array.from(colorMap.values());

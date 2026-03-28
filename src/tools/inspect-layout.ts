@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
-import type { FigmaNode } from "../types/figma.js";
+import type { FigmaNode, TypeStyle } from "../types/figma.js";
 import type {
   InspectLayoutInput,
   InspectLayoutResult,
@@ -8,15 +8,119 @@ import type {
   LayoutInfo,
   ConstraintInfo,
   AccessibilityWarning,
+  TextRun,
+  AnnotationInfo,
 } from "../types/tools.js";
 
 export const inspectLayoutSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
   node_id: z.string().describe("The node ID of the frame to inspect"),
   access_token: z.string().describe("Your Figma personal access token"),
+  max_depth: z.number().optional().default(10),
+  framework: z.enum(["web", "react", "unity", "swiftui"]).optional(),
 });
 
-function walkHierarchy(node: FigmaNode, depth: number, results: NodeSummary[]): void {
+function isLayoutNode(node: FigmaNode): boolean {
+  return Boolean(node.layoutMode && node.layoutMode !== "NONE");
+}
+
+function collectTextRuns(node: FigmaNode): TextRun[] | undefined {
+  if (node.type !== "TEXT" || !node.characters || !node.style) {
+    return undefined;
+  }
+
+  const overrides = node.characterStyleOverrides;
+  if (!overrides || overrides.length === 0 || overrides.every((value) => value === 0)) {
+    return undefined;
+  }
+
+  const runs: TextRun[] = [];
+  let startIndex = 0;
+  let currentOverride = overrides[0] ?? 0;
+
+  const buildStyle = (overrideIndex: number): Partial<TypeStyle> => {
+    if (overrideIndex === 0) {
+      return { ...node.style };
+    }
+
+    return { ...node.style, ...(node.styleOverrideTable?.[String(overrideIndex)] ?? {}) };
+  };
+
+  for (let index = 1; index <= node.characters.length; index += 1) {
+    const nextOverride = overrides[index] ?? currentOverride;
+    if (index === node.characters.length || nextOverride !== currentOverride) {
+      runs.push({
+        text: node.characters.slice(startIndex, index),
+        style: buildStyle(currentOverride),
+        startIndex,
+        endIndex: index,
+      });
+      startIndex = index;
+      currentOverride = nextOverride;
+    }
+  }
+
+  return runs;
+}
+
+function getFrameworkHints(node: FigmaNode, framework: InspectLayoutInput["framework"]): Record<string, string> | undefined {
+  if (!framework) {
+    return undefined;
+  }
+
+  const hints: Record<string, string> = {};
+
+  switch (framework) {
+    case "unity":
+      if (node.type === "TEXT") {
+        hints["component"] = "TextMeshProUGUI";
+      }
+      if (node.type === "IMAGE") {
+        hints["component"] = "Image component";
+      }
+      if (node.type === "FRAME" && isLayoutNode(node)) {
+        hints["layout"] =
+          node.layoutMode === "HORIZONTAL" ? "HorizontalLayoutGroup" : "VerticalLayoutGroup";
+      }
+      break;
+    case "react":
+      if (node.type === "TEXT") {
+        hints["element"] = "<p>/<span>";
+      }
+      if (node.type === "FRAME" && isLayoutNode(node)) {
+        hints["container"] = "flex container";
+        hints["layout"] = "display: flex";
+      }
+      break;
+    case "swiftui":
+      if (node.type === "TEXT") {
+        hints["view"] = "Text view";
+      }
+      if (node.type === "FRAME" && isLayoutNode(node)) {
+        hints["layout"] = node.layoutMode === "HORIZONTAL" ? "HStack" : "VStack";
+      }
+      break;
+    case "web":
+      if (node.type === "TEXT") {
+        hints["element"] = "<p>";
+      }
+      if (node.type === "FRAME") {
+        hints["element"] = "<div>";
+      }
+      break;
+  }
+
+  return Object.keys(hints).length > 0 ? hints : undefined;
+}
+
+function walkHierarchy(
+  node: FigmaNode,
+  depth: number,
+  maxDepth: number,
+  framework: InspectLayoutInput["framework"],
+  results: NodeSummary[],
+  state: { truncatedAtDepth: boolean }
+): void {
   const positioningMode =
     node.layoutMode && node.layoutMode !== "NONE" ? "auto-layout" : "absolute";
 
@@ -27,12 +131,27 @@ function walkHierarchy(node: FigmaNode, depth: number, results: NodeSummary[]): 
     depth,
     childCount: node.children?.length ?? 0,
     positioningMode,
+    textRuns: collectTextRuns(node),
+    frameworkHints: getFrameworkHints(node, framework),
   });
 
-  node.children?.forEach((child) => walkHierarchy(child, depth + 1, results));
+  if (depth >= maxDepth) {
+    if ((node.children?.length ?? 0) > 0) {
+      state.truncatedAtDepth = true;
+    }
+    return;
+  }
+
+  node.children?.forEach((child) => walkHierarchy(child, depth + 1, maxDepth, framework, results, state));
 }
 
-function collectAutoLayouts(node: FigmaNode, results: LayoutInfo[]): void {
+function collectAutoLayouts(
+  node: FigmaNode,
+  depth: number,
+  maxDepth: number,
+  results: LayoutInfo[],
+  state: { truncatedAtDepth: boolean }
+): void {
   if (node.layoutMode && node.layoutMode !== "NONE") {
     results.push({
       nodeId: node.id,
@@ -54,10 +173,23 @@ function collectAutoLayouts(node: FigmaNode, results: LayoutInfo[]): void {
     });
   }
 
-  node.children?.forEach((child) => collectAutoLayouts(child, results));
+  if (depth >= maxDepth) {
+    if ((node.children?.length ?? 0) > 0) {
+      state.truncatedAtDepth = true;
+    }
+    return;
+  }
+
+  node.children?.forEach((child) => collectAutoLayouts(child, depth + 1, maxDepth, results, state));
 }
 
-function collectConstraints(node: FigmaNode, results: ConstraintInfo[]): void {
+function collectConstraints(
+  node: FigmaNode,
+  depth: number,
+  maxDepth: number,
+  results: ConstraintInfo[],
+  state: { truncatedAtDepth: boolean }
+): void {
   if (node.constraints && node.absoluteBoundingBox) {
     results.push({
       nodeId: node.id,
@@ -68,13 +200,26 @@ function collectConstraints(node: FigmaNode, results: ConstraintInfo[]): void {
     });
   }
 
-  node.children?.forEach((child) => collectConstraints(child, results));
+  if (depth >= maxDepth) {
+    if ((node.children?.length ?? 0) > 0) {
+      state.truncatedAtDepth = true;
+    }
+    return;
+  }
+
+  node.children?.forEach((child) => collectConstraints(child, depth + 1, maxDepth, results, state));
 }
 
 const MIN_FONT_SIZE_PX = 11;
 const MIN_TOUCH_TARGET_PX = 44;
 
-function collectAccessibilityWarnings(node: FigmaNode, warnings: AccessibilityWarning[]): void {
+function collectAccessibilityWarnings(
+  node: FigmaNode,
+  depth: number,
+  maxDepth: number,
+  warnings: AccessibilityWarning[],
+  state: { truncatedAtDepth: boolean }
+): void {
   if (node.type === "TEXT" && node.style) {
     const size = node.style.fontSize;
     if (size < MIN_FONT_SIZE_PX) {
@@ -106,7 +251,42 @@ function collectAccessibilityWarnings(node: FigmaNode, warnings: AccessibilityWa
     }
   }
 
-  node.children?.forEach((child) => collectAccessibilityWarnings(child, warnings));
+  if (depth >= maxDepth) {
+    if ((node.children?.length ?? 0) > 0) {
+      state.truncatedAtDepth = true;
+    }
+    return;
+  }
+
+  node.children?.forEach((child) =>
+    collectAccessibilityWarnings(child, depth + 1, maxDepth, warnings, state)
+  );
+}
+
+function collectAnnotations(
+  node: FigmaNode,
+  depth: number,
+  maxDepth: number,
+  results: AnnotationInfo[],
+  state: { truncatedAtDepth: boolean }
+): void {
+  for (const annotation of node.annotations ?? []) {
+    results.push({
+      nodeId: node.id,
+      nodeName: node.name,
+      label: annotation.label,
+      properties: annotation.properties,
+    });
+  }
+
+  if (depth >= maxDepth) {
+    if ((node.children?.length ?? 0) > 0) {
+      state.truncatedAtDepth = true;
+    }
+    return;
+  }
+
+  node.children?.forEach((child) => collectAnnotations(child, depth + 1, maxDepth, results, state));
 }
 
 export async function inspectLayout(
@@ -123,15 +303,19 @@ export async function inspectLayout(
   }
 
   const frame = nodeData.document;
+  const maxDepth = input.max_depth ?? 10;
   const hierarchy: NodeSummary[] = [];
   const autoLayouts: LayoutInfo[] = [];
   const constraints: ConstraintInfo[] = [];
+  const annotations: AnnotationInfo[] = [];
   const accessibilityWarnings: AccessibilityWarning[] = [];
+  const state = { truncatedAtDepth: false };
 
-  walkHierarchy(frame, 0, hierarchy);
-  collectAutoLayouts(frame, autoLayouts);
-  collectConstraints(frame, constraints);
-  collectAccessibilityWarnings(frame, accessibilityWarnings);
+  walkHierarchy(frame, 0, maxDepth, input.framework, hierarchy, state);
+  collectAutoLayouts(frame, 0, maxDepth, autoLayouts, state);
+  collectConstraints(frame, 0, maxDepth, constraints, state);
+  collectAnnotations(frame, 0, maxDepth, annotations, state);
+  collectAccessibilityWarnings(frame, 0, maxDepth, accessibilityWarnings, state);
 
   const autoLayoutNodeIds = new Set(autoLayouts.map((l) => l.nodeId));
 
@@ -154,12 +338,14 @@ export async function inspectLayout(
       hierarchy,
       autoLayouts,
       constraints,
+      annotations,
       accessibilityWarnings,
       stats: {
         totalNodes: hierarchy.length,
         autoLayoutNodes: autoLayoutNodeIds.size,
         absoluteNodes: hierarchy.length - autoLayoutNodeIds.size,
         textNodeCount: hierarchy.filter((n) => n.type === "TEXT").length,
+        truncatedAtDepth: state.truncatedAtDepth,
       },
       cache: response.cache,
     },

@@ -18,6 +18,22 @@ export interface InspectLayoutInput {
   file_key: string;
   node_id: string;
   access_token: string;
+  max_depth?: number | undefined;
+  framework?: string | undefined;
+}
+
+export interface TextRun {
+  text: string;
+  style: Partial<import("./figma.js").TypeStyle>;
+  startIndex: number;
+  endIndex: number;
+}
+
+export interface AnnotationInfo {
+  nodeId: string;
+  nodeName: string;
+  label: string;
+  properties: Array<{ type: string; value?: string }>;
 }
 
 export interface NodeSummary {
@@ -27,6 +43,8 @@ export interface NodeSummary {
   depth: number;
   childCount: number;
   positioningMode: "auto-layout" | "absolute";
+  textRuns?: TextRun[] | undefined;
+  frameworkHints?: Record<string, string> | undefined;
 }
 
 export interface LayoutInfo {
@@ -64,12 +82,14 @@ export interface InspectLayoutData {
   hierarchy: NodeSummary[];
   autoLayouts: LayoutInfo[];
   constraints: ConstraintInfo[];
+  annotations: AnnotationInfo[];
   accessibilityWarnings: AccessibilityWarning[];
   stats: {
     totalNodes: number;
     autoLayoutNodes: number;
     absoluteNodes: number;
     textNodeCount: number;
+    truncatedAtDepth: boolean;
   };
   cache: CacheMetadata;
 }
@@ -86,6 +106,7 @@ export interface ExtractDesignTokensInput {
 
 export interface ColorToken {
   name: string;
+  figmaStyleName?: string | undefined;
   value: string;
   hex: string;
   rgba: { r: number; g: number; b: number; a: number };
@@ -95,6 +116,7 @@ export interface ColorToken {
 
 export interface TypographyToken {
   name: string;
+  figmaStyleName?: string | undefined;
   fontFamily: string;
   fontSize: number;
   fontWeight: number;
