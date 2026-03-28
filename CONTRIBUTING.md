@@ -1,10 +1,10 @@
-# Contributing to figma-spec
+# Contributing to figma-spec-mcp
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/zaferdace/figma-spec.git
-cd figma-spec
+git clone https://github.com/zaferdace/figma-spec-mcp.git
+cd figma-spec-mcp
 npm install
 npm run build
 ```

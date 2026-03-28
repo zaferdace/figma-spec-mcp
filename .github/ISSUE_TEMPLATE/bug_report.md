@@ -25,7 +25,7 @@ What actually happened. Include full error output or stack trace if available.
 
 ## Environment
 
-- figma-spec version:
+- figma-spec-mcp version:
 - Node version (`node -v`):
 - OS:
 - MCP client (Claude Desktop / Cursor / other):
