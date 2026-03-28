@@ -152,7 +152,8 @@ export class FigmaClient {
       }
 
       const body = await response.text();
-      throw new Error(`Figma API error ${response.status}: ${body}`);
+      const sanitized = body.replace(/figd_[A-Za-z0-9_-]+/g, "[REDACTED]");
+      throw new Error(`Figma API error ${response.status}: ${sanitized}`);
     }
 
     return response.json() as Promise<T>;

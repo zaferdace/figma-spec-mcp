@@ -56,7 +56,7 @@ export async function exportImages(
 registerTool({
   name: "export_images",
   description:
-    "Exports Figma nodes as images (PNG, SVG, PDF) via the Figma image export API. Returns download URLs for each requested node.",
+    "Exports Figma nodes as images (PNG, JPG, SVG, PDF) via the Figma image export API. Returns download URLs for each requested node.",
   schema: exportImagesSchema,
   handler: exportImages,
 });

@@ -4,9 +4,13 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
-**An MCP server for AI agents that reads Figma files and returns structured, versioned specs for layout inspection, design extraction, accessibility review, prototype analysis, and platform handoff workflows.**
+<p align="center">
+  <img src="assets/banner.png" alt="figma-spec — Bridge Figma to Game Engines" width="720" />
+</p>
 
-`figma-spec` gives AI agents deterministic access to Figma files with a built-in disk cache to reduce repeat API calls and keep tool output stable for downstream automation.
+**Engineering-grade Figma specs for AI agents.** Layout audit, design tokens, accessibility checks, prototype flows, version diffs, and platform-ready mapping for Unity, React, SwiftUI, and more — all through MCP.
+
+Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, VS Code + Copilot, Windsurf, Cline, Continue.dev, Zed.
 
 > **Security note:** Your Figma access token is passed as a tool argument. Never commit it to version control. Use environment variables or your AI client's secret management to supply it at runtime.
 
@@ -17,7 +21,7 @@
 **1. Get a Figma access token**
 → [figma.com/developers/api#access-tokens](https://www.figma.com/developers/api#access-tokens)
 
-**2. Add to your MCP config** (`claude_desktop_config.json` or `.cursor/mcp.json`):
+**2. Add to your MCP config** (Claude Desktop, Cursor, VS Code, or any MCP client):
 ```json
 {
   "mcpServers": {
@@ -64,21 +68,29 @@ Most Figma MCP tools forward raw API responses. `figma-spec` adds stable envelop
 
 ## Features
 
-### v0.2
+### v0.1 — Core
+- `inspect_layout`, `extract_design_tokens`, `map_to_unity`
+- Disk cache with SHA-256 keying and 1h TTL
 
-- Added component resolution, prototype flow extraction, and codebase bridging tools
-- Added version diffing and variant extraction workflows
+### v0.2 — Intelligence
+- Token name preservation from Figma styles
+- Depth-limited chunking for large files
+- Mixed/rich text runs extraction
+- Annotation extraction, framework-aware hints (Unity, React, SwiftUI, Web)
 
-### v0.3
+### v0.3 — Workflows
+- `resolve_components` — multi-file component traversal
+- `extract_flows` — prototype flow graph
+- `bridge_to_codebase` — Figma → repo file matching
+- `diff_versions` — structured version diff
+- `extract_variants` — component set batch extraction
 
-- Added image export and accessibility auditing tools
-- Expanded analysis beyond layout and tokens into QA and asset workflows
-
-### v0.4
-
-- Added `simplify_context` for LLM-friendly frame summaries
-- Unified tools around a shared response envelope with schema versioning and freshness metadata
-- Shipped as `figma-spec` version `0.4.0`
+### v0.4 — Quality & DX
+- `export_images` — PNG/JPG/SVG/PDF export
+- `audit_accessibility` — WCAG 2.1 contrast, touch targets, font size
+- `simplify_context` — AI-optimized, token-efficient output
+- Tool registry pattern for easy contribution
+- Rate limit handling (429 + Retry-After)
 
 ---
 
@@ -133,12 +145,11 @@ node dist/index.js
 
 ## Roadmap
 
-- [ ] Named style extraction (Figma Styles API)
-- [ ] Component variant mapping
 - [ ] Export to React Native StyleSheet
 - [ ] Export to Flutter ThemeData
-- [ ] Deeper accessibility heuristics and remediation guidance
-- [ ] Smarter cache invalidation by file version
+- [ ] Semantic component detection (button/card/nav inference)
+- [ ] Webhook-triggered spec generation
+- [ ] Plugin API companion for live document access
 
 ---
 
