@@ -1,5 +1,5 @@
 {
-  "name": "figma-spec",
+  "name": "figma-spec-mcp",
   "version": "0.4.0",
   "description": "MCP server for Figma — layout audit, design tokens, accessibility, Unity mapping, and AI-optimized specs",
   "keywords": [
@@ -15,13 +15,13 @@
     "claude",
     "cursor"
   ],
-  "homepage": "https://github.com/zaferdace/figma-spec",
+  "homepage": "https://github.com/zaferdace/figma-spec-mcp",
   "bugs": {
-    "url": "https://github.com/zaferdace/figma-spec/issues"
+    "url": "https://github.com/zaferdace/figma-spec-mcp/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zaferdace/figma-spec.git"
+    "url": "git+https://github.com/zaferdace/figma-spec-mcp.git"
   },
   "license": "MIT",
   "author": "Zafer Dace",
@@ -29,7 +29,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "figma-spec": "dist/index.js"
+    "figma-spec-mcp": "dist/index.js"
   },
   "files": [
     "dist"

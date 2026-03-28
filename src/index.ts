@@ -11,7 +11,7 @@ import "./tools/register-all.js";
 import { executeTool, getToolDefinitions } from "./tools/registry.js";
 
 const server = new Server(
-  { name: "figma-spec", version: SERVER_VERSION },
+  { name: "figma-spec-mcp", version: SERVER_VERSION },
   { capabilities: { tools: {} } }
 );
 

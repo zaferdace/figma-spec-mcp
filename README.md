@@ -1,11 +1,11 @@
-# figma-spec
+# figma-spec-mcp
 
 ![Version: 0.4.0](https://img.shields.io/badge/version-0.4.0-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
 <p align="center">
-  <img src="assets/banner.png" alt="figma-spec — Bridge Figma to Game Engines" width="720" />
+  <img src="assets/banner.png" alt="figma-spec-mcp — Bridge Figma to Game Engines" width="720" />
 </p>
 
 **Engineering-grade Figma specs for AI agents.** Layout audit, design tokens, accessibility checks, prototype flows, version diffs, and platform-ready mapping for Unity, React, SwiftUI, and more — all through MCP.
@@ -25,9 +25,9 @@ Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, V
 ```json
 {
   "mcpServers": {
-    "figma-spec": {
+    "figma-spec-mcp": {
       "command": "npx",
-      "args": ["-y", "figma-spec"]
+      "args": ["-y", "figma-spec-mcp"]
     }
   }
 }
@@ -39,9 +39,9 @@ Your file key is in the Figma URL: `figma.com/file/<FILE_KEY>/...`
 
 ---
 
-## Why figma-spec?
+## Why figma-spec-mcp?
 
-Most Figma MCP tools forward raw API responses. `figma-spec` adds stable envelopes, focused derivations, and reusable engineering outputs:
+Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable envelopes, focused derivations, and reusable engineering outputs:
 
 - Deterministic JSON responses with a shared response envelope
 - Built-in disk cache with freshness metadata on every result
@@ -118,7 +118,7 @@ Tool-specific results live in `data`, and most tools also include low-level cach
 
 ## Caching
 
-Responses are cached to disk (default: `$TMPDIR/figma-spec-cache/`) by file key and request shape with a 1-hour TTL. Cache metadata is included in responses:
+Responses are cached to disk (default: `$TMPDIR/figma-spec-mcp-cache/`) by file key and request shape with a 1-hour TTL. Cache metadata is included in responses:
 
 ```json
 "cache": {
@@ -134,8 +134,8 @@ Responses are cached to disk (default: `$TMPDIR/figma-spec-cache/`) by file key 
 ## Development
 
 ```bash
-git clone https://github.com/zaferdace/figma-spec
-cd figma-spec
+git clone https://github.com/zaferdace/figma-spec-mcp
+cd figma-spec-mcp
 npm install
 npm run build
 node dist/index.js
