@@ -10,3 +10,7 @@ import "./extract-variants.js";
 import "./export-images.js";
 import "./audit-accessibility.js";
 import "./simplify-context.js";
+import "./lint-handoff-readiness.js";
+import "./generate-implementation-contract.js";
+import "./extract-missing-states.js";
+import "./flow-to-test-cases.js";

@@ -2,6 +2,7 @@ export interface FigmaNode {
   id: string;
   name: string;
   type: string;
+  visible?: boolean;
   componentId?: string;
   description?: string;
   children?: FigmaNode[];
@@ -13,6 +14,7 @@ export interface FigmaNode {
   counterAxisSizingMode?: "FIXED" | "AUTO";
   primaryAxisAlignItems?: "MIN" | "CENTER" | "MAX" | "SPACE_BETWEEN";
   counterAxisAlignItems?: "MIN" | "CENTER" | "MAX" | "BASELINE";
+  layoutPositioning?: "AUTO" | "ABSOLUTE";
   paddingLeft?: number;
   paddingRight?: number;
   paddingTop?: number;

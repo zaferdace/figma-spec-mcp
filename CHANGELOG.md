@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.3] - 2026-03-29
+
+### Added
+- `lint_handoff_readiness` for naming, layout, visibility, sizing, and text-style readiness checks before engineering handoff
+- `generate_implementation_contract` for implementation scope, asset/export lists, dependencies, interactions, colors, typography, and acceptance criteria
+- `extract_missing_states` for component/component-set state coverage analysis against a standard expected-state set
+- `flow_to_test_cases` for converting prototype flows into QA-ready navigation test cases and flow coverage gaps
+
+### Changed
+- `extract_flows` now uses the shared internal flow-graph helper also used by `flow_to_test_cases`
+
 ## [1.0.0-beta.2] - 2026-03-28
 
 ### Fixed

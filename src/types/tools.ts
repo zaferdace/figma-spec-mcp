@@ -398,3 +398,155 @@ export interface SimplifyContextData {
 }
 
 export type SimplifyContextResult = ResponseEnvelope<SimplifyContextData>;
+
+// ─── lint_handoff_readiness ──────────────────────────────────────────────────
+
+export interface LintHandoffReadinessInput {
+  file_key: string;
+  node_id?: string | undefined;
+  access_token: string;
+  ruleset?: "web" | "mobile" | "game-ui" | undefined;
+}
+
+export interface HandoffLintFinding {
+  rule: string;
+  severity: "error" | "warning" | "info";
+  nodeId: string;
+  nodeName: string;
+  message: string;
+  fixHint: string;
+}
+
+export interface LintHandoffReadinessData {
+  findings: HandoffLintFinding[];
+  score: number;
+  summary: { errors: number; warnings: number; info: number };
+  cache: CacheMetadata;
+}
+
+export type LintHandoffReadinessResult = ResponseEnvelope<LintHandoffReadinessData>;
+
+// ─── generate_implementation_contract ───────────────────────────────────────
+
+export interface GenerateImplementationContractInput {
+  file_key: string;
+  node_id: string;
+  access_token: string;
+  target?: "frontend" | "mobile" | "game-ui" | undefined;
+}
+
+export interface ImplementationScope {
+  totalNodes: number;
+  maxDepth: number;
+  uniqueNodeTypes: string[];
+  nodeTypeCounts: Array<{ type: string; count: number }>;
+}
+
+export interface ImplementationAsset {
+  nodeId: string;
+  nodeName: string;
+  assetType: "VECTOR" | "BOOLEAN_OPERATION" | "IMAGE";
+  exportHint: string;
+}
+
+export interface DetectedState {
+  state: string;
+  nodeIds: string[];
+  nodeNames: string[];
+}
+
+export interface ImplementationInteraction {
+  fromNodeId: string;
+  fromNodeName: string;
+  toNodeId: string;
+  toNodeName: string;
+  trigger: string;
+  transitionType: string;
+}
+
+export interface ImplementationDependency {
+  componentId: string;
+  componentName: string;
+  instanceCount: number;
+  instanceNodeIds: string[];
+}
+
+export interface TypographyUsage {
+  fontFamily: string;
+  fontSize: number;
+  usageCount: number;
+}
+
+export interface ColorUsage {
+  hex: string;
+  usageCount: number;
+}
+
+export interface GenerateImplementationContractData {
+  scope: ImplementationScope;
+  assets: ImplementationAsset[];
+  states: DetectedState[];
+  interactions: ImplementationInteraction[];
+  dependencies: ImplementationDependency[];
+  typography: TypographyUsage[];
+  colors: ColorUsage[];
+  acceptanceCriteria: string[];
+  edgeCases: string[];
+  cache: CacheMetadata;
+}
+
+export type GenerateImplementationContractResult = ResponseEnvelope<GenerateImplementationContractData>;
+
+// ─── extract_missing_states ──────────────────────────────────────────────────
+
+export interface ExtractMissingStatesInput {
+  file_key: string;
+  node_id: string;
+  access_token: string;
+}
+
+export interface MissingStateComponent {
+  name: string;
+  nodeId: string;
+  presentStates: string[];
+  missingStates: string[];
+  confidence: number;
+}
+
+export interface ExtractMissingStatesData {
+  components: MissingStateComponent[];
+  cache: CacheMetadata;
+}
+
+export type ExtractMissingStatesResult = ResponseEnvelope<ExtractMissingStatesData>;
+
+// ─── flow_to_test_cases ──────────────────────────────────────────────────────
+
+export interface FlowToTestCasesInput {
+  file_key: string;
+  node_id: string;
+  access_token: string;
+}
+
+export interface FlowTestCase {
+  title: string;
+  preconditions: string;
+  steps: string[];
+  expected: string;
+}
+
+export interface FlowCoverage {
+  totalFrames: number;
+  connectedFrames: number;
+  deadEnds: number;
+  orphans: number;
+}
+
+export interface FlowToTestCasesData {
+  testCases: FlowTestCase[];
+  edgeCaseGaps: string[];
+  flowCoverage: FlowCoverage;
+  cache: CacheMetadata;
+}
+
+export type FlowToTestCasesResult = ResponseEnvelope<FlowToTestCasesData>;

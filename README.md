@@ -1,6 +1,6 @@
 # figma-spec-mcp
 
-![Version: 1.0.0-beta.2](https://img.shields.io/badge/version-1.0.0--beta.2-orange)
+![Version: 1.0.0-beta.3](https://img.shields.io/badge/version-1.0.0--beta.3-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
@@ -63,6 +63,10 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 - `export_images` — Exports one or more Figma nodes as PNG, JPG, SVG, or PDF and returns the image URLs.
 - `audit_accessibility` — Audits a frame for accessibility issues such as contrast, touch targets, font size, missing alt text, and color-only distinctions.
 - `simplify_context` — Produces a token-efficient, LLM-oriented summary tree by collapsing wrappers, grouping repeated nodes, and truncating deep hierarchies.
+- `lint_handoff_readiness` — Audits a frame for engineering handoff readiness: unnamed layers, absolute positioning soup, missing auto-layout, orphaned nodes, oversized images.
+- `generate_implementation_contract` — Produces a structured implementation spec with scope, assets, states, interactions, dependencies, typography, colors, and acceptance criteria.
+- `extract_missing_states` — Scans components for missing UI states (hover, pressed, disabled, loading, error, empty) against a standard expected-state set.
+- `flow_to_test_cases` — Converts prototype flows into QA-ready test cases with navigation steps, expected outcomes, and flow coverage gaps.
 
 ---
 
@@ -92,11 +96,17 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 - Tool registry pattern for easy contribution
 - Rate limit handling (429 + Retry-After)
 
+### v0.5 — Handoff & QA
+- `lint_handoff_readiness` — design-to-code readiness audit with scoring
+- `generate_implementation_contract` — structured implementation scope + acceptance criteria
+- `extract_missing_states` — component state coverage analysis
+- `flow_to_test_cases` — prototype flows → QA test scenarios
+
 ---
 
 ## Response Shape
 
-All 11 tools return a consistent top-level envelope:
+All 15 tools return a consistent top-level envelope:
 
 ```json
 {
