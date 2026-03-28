@@ -72,7 +72,7 @@ export class FigmaClient {
   }
 
   private getFileNodesCacheKey(fileKey: string, nodeIds: string[], fileVersion?: string): string {
-    const sortedIds = [...nodeIds].sort();
+    const sortedIds = [...nodeIds].sort((a, b) => a.localeCompare(b));
     return this.cacheKey([fileKey, ...sortedIds, fileVersion ?? "latest"]);
   }
 
@@ -82,7 +82,7 @@ export class FigmaClient {
     format: "png" | "jpg" | "svg" | "pdf",
     scale: number
   ): string {
-    const sortedIds = [...nodeIds].sort();
+    const sortedIds = [...nodeIds].sort((a, b) => a.localeCompare(b));
     return this.cacheKey([fileKey, "images", format, String(scale), ...sortedIds]);
   }
 
@@ -152,7 +152,7 @@ export class FigmaClient {
       }
 
       const body = await response.text();
-      const sanitized = body.replace(/figd_[A-Za-z0-9_-]+/g, "[REDACTED]");
+      const sanitized = body.replaceAll(/figd_[A-Za-z0-9_-]+/g, "[REDACTED]");
       throw new Error(`Figma API error ${response.status}: ${sanitized}`);
     }
 

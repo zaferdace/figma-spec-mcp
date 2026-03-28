@@ -194,7 +194,7 @@ export async function mapToUnity(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<MapToUnityResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedId = input.node_id.replace(/-/g, ":");
+  const normalizedId = input.node_id.replaceAll("-", ":");
   const response = await client.getFileNodes(input.file_key, [normalizedId]);
 
   const nodeData = response.data.nodes[normalizedId];

@@ -37,12 +37,12 @@ function loadGitignorePatterns(projectPath: string): string[] {
 function shouldIgnore(relativePath: string, patterns: string[]): boolean {
   const normalized = relativePath.split(path.sep).join("/");
   return patterns.some((pattern) => {
-    const cleaned = pattern.replace(/\/$/u, "");
+    const cleaned = pattern.replaceAll(/\/$/u, "");
     if (cleaned.includes("*")) {
       const regex = new RegExp(
         `^${cleaned
           .split("*")
-          .map((part) => part.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
+          .map((part) => part.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
           .join(".*")}$`,
         "i"
       );
@@ -85,7 +85,7 @@ function scanProjectFiles(
 }
 
 function normalizeName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return value.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
 }
 
 function emptyMatch(componentName: string): CodebaseMapping {

@@ -84,7 +84,7 @@ function topoSortFrameIds(frameIds: string[], flows: FlowConnection[]): string[]
     }
   });
 
-  const queue = frameIds.filter((id) => (inDegree.get(id) ?? 0) === 0).sort();
+  const queue = frameIds.filter((id) => (inDegree.get(id) ?? 0) === 0).sort((a, b) => a.localeCompare(b));
   const order: string[] = [];
   const insertSorted = (value: string): void => {
     let index = queue.length;
@@ -127,7 +127,7 @@ export async function extractFlows(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<ExtractFlowsResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedId = input.node_id.replace(/-/g, ":");
+  const normalizedId = input.node_id.replaceAll("-", ":");
   const response = await client.getFileNodes(input.file_key, [normalizedId]);
   const root = response.data.nodes[normalizedId]?.document;
 

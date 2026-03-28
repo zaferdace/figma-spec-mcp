@@ -17,7 +17,7 @@ export async function exportImages(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<ExportImagesResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedIds = input.node_ids.map((nodeId) => nodeId.replace(/-/g, ":"));
+  const normalizedIds = input.node_ids.map((nodeId) => nodeId.replaceAll("-", ":"));
   const format = input.format ?? "png";
   const scale = input.scale ?? 2;
   const [nodesResponse, imagesResponse] = await Promise.all([

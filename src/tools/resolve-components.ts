@@ -32,7 +32,7 @@ export async function resolveComponents(
   clientOptions?: { ttlMs?: number; disableCache?: boolean }
 ): Promise<ResolveComponentsResult> {
   const client = new FigmaClient(input.access_token, clientOptions);
-  const normalizedId = input.node_id?.replace(/-/g, ":");
+  const normalizedId = input.node_id?.replaceAll("-", ":");
   const fileResponse = await client.getFile(input.file_key);
   const nodeResponse = normalizedId
     ? await client.getFileNodes(input.file_key, [normalizedId], fileResponse.data.version)
