@@ -12,7 +12,18 @@ export const extractMissingStatesSchema = z.object({
   access_token: z.string().describe("Your Figma personal access token"),
 });
 
-const EXPECTED_STATES = ["Default", "Hover", "Pressed", "Disabled", "Active", "Selected", "Focus", "Error", "Loading", "Empty"];
+const EXPECTED_STATES = [
+  "Default",
+  "Hover",
+  "Pressed",
+  "Disabled",
+  "Active",
+  "Selected",
+  "Focus",
+  "Error",
+  "Loading",
+  "Empty",
+];
 
 function parseVariantStateNames(name: string): string[] {
   const lowerName = name.toLowerCase();

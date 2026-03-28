@@ -26,7 +26,11 @@ export const generateImplementationContractSchema = z.object({
 const STATE_NAMES = ["Default", "Hover", "Pressed", "Disabled", "Active", "Selected", "Error", "Loading", "Empty"];
 
 function colorToHex(color: Color): string {
-  const toHex = (value: number): string => Math.round(value * 255).toString(16).padStart(2, "0").toUpperCase();
+  const toHex = (value: number): string =>
+    Math.round(value * 255)
+      .toString(16)
+      .padStart(2, "0")
+      .toUpperCase();
   return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`;
 }
 
@@ -76,7 +80,9 @@ function buildDependencies(root: FigmaNode, file: FigmaFileResponse): Implementa
     dependencyMap.set(key, current);
   });
 
-  return Array.from(dependencyMap.values()).sort((a, b) => b.instanceCount - a.instanceCount || a.componentName.localeCompare(b.componentName));
+  return Array.from(dependencyMap.values()).sort(
+    (a, b) => b.instanceCount - a.instanceCount || a.componentName.localeCompare(b.componentName)
+  );
 }
 
 function buildStates(root: FigmaNode): DetectedState[] {
@@ -199,7 +205,9 @@ export async function generateImplementationContract(
     edgeCases.push(`Verify ${imageCount} raster assets for target-device memory and scaling constraints.`);
   }
   if (colors.length > 12) {
-    edgeCases.push(`High color variety detected (${colors.length} solids); check whether tokens should be consolidated.`);
+    edgeCases.push(
+      `High color variety detected (${colors.length} solids); check whether tokens should be consolidated.`
+    );
   }
   if (maxDepth >= 6) {
     edgeCases.push(`Deep hierarchy detected (depth ${maxDepth}); watch for brittle implementation structure.`);

@@ -2,11 +2,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
-import type {
-  HandoffLintFinding,
-  LintHandoffReadinessInput,
-  LintHandoffReadinessResult,
-} from "../types/tools.js";
+import type { HandoffLintFinding, LintHandoffReadinessInput, LintHandoffReadinessResult } from "../types/tools.js";
 import { findNodeById, isFrameLike, walkTree } from "./figma-tree.js";
 import { registerTool } from "./registry.js";
 
