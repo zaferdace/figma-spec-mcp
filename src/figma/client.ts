@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import type { FigmaFileResponse, FigmaNode } from "../types/figma.js";
+import type { FigmaComponentResponse, FigmaFileResponse, FigmaNode } from "../types/figma.js";
 
 const FIGMA_API_BASE = "https://api.figma.com/v1";
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -123,15 +123,16 @@ export class FigmaClient {
     return response.json() as Promise<T>;
   }
 
-  async getFile(fileKey: string): Promise<CachedResult<FigmaFileResponse>> {
-    const key = this.cacheKey([fileKey, "file"]);
+  async getFile(fileKey: string, version?: string): Promise<CachedResult<FigmaFileResponse>> {
+    const key = this.cacheKey([fileKey, "file", version ?? "latest"]);
     const cached = this.readCache<FigmaFileResponse>(key);
 
     if (cached && Date.now() < cached.expiresAt) {
       return { data: cached.data, cache: this.buildCacheMetadata(cached) };
     }
 
-    const data = await this.request<FigmaFileResponse>(`/files/${fileKey}`);
+    const params = version ? `?version=${encodeURIComponent(version)}` : "";
+    const data = await this.request<FigmaFileResponse>(`/files/${fileKey}${params}`);
     this.writeCache(key, data, data.version);
     const entry = this.readCache<FigmaFileResponse>(key);
     const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata(data.version);
@@ -174,6 +175,21 @@ export class FigmaClient {
     const data = await this.request<{ styles: Record<string, unknown> }>(`/files/${fileKey}/styles`);
     this.writeCache(key, data, "unknown");
     const entry = this.readCache<{ styles: Record<string, unknown> }>(key);
+    const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata("unknown");
+    return { data, cache };
+  }
+
+  async getComponent(componentKey: string): Promise<CachedResult<FigmaComponentResponse>> {
+    const key = this.cacheKey(["component", componentKey]);
+    const cached = this.readCache<FigmaComponentResponse>(key);
+
+    if (cached && Date.now() < cached.expiresAt) {
+      return { data: cached.data, cache: this.buildCacheMetadata(cached) };
+    }
+
+    const data = await this.request<FigmaComponentResponse>(`/components/${componentKey}`);
+    this.writeCache(key, data, "unknown");
+    const entry = this.readCache<FigmaComponentResponse>(key);
     const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata("unknown");
     return { data, cache };
   }

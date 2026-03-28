@@ -8,6 +8,8 @@
     "model-context-protocol",
     "design-tokens",
     "unity",
+    "layout-audit",
+    "ai-agents",
     "design-system",
     "ai",
     "claude",
@@ -25,6 +27,7 @@
   "author": "Zafer Dace",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "figma-spec": "dist/index.js"
   },

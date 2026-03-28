@@ -2,6 +2,7 @@ export interface FigmaNode {
   id: string;
   name: string;
   type: string;
+  componentId?: string;
   children?: FigmaNode[];
   styles?: Record<string, string>;
   absoluteBoundingBox?: BoundingBox;
@@ -25,6 +26,9 @@ export interface FigmaNode {
   characters?: string;
   characterStyleOverrides?: number[];
   styleOverrideTable?: Record<string, TypeStyle>;
+  transitionNodeID?: string;
+  transitionDuration?: number;
+  transitionEasing?: object;
   annotations?: Array<{
     label: string;
     properties: Array<{ type: string; value?: string }>;
@@ -102,6 +106,11 @@ export interface ComponentMetadata {
   name: string;
   description: string;
   documentationLinks?: { uri: string }[];
+}
+
+export interface FigmaComponentResponse extends ComponentMetadata {
+  file_key: string;
+  node_id: string;
 }
 
 export interface StyleMetadata {

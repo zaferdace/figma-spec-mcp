@@ -190,3 +190,132 @@ export interface MapToUnityData {
 }
 
 export type MapToUnityResult = ResponseEnvelope<MapToUnityData>;
+
+// ─── resolve_components ──────────────────────────────────────────────────────
+
+export interface ResolveComponentsInput {
+  file_key: string;
+  access_token: string;
+  node_id?: string | undefined;
+}
+
+export interface ResolvedComponent {
+  instanceNodeId: string;
+  componentName: string;
+  componentKey: string;
+  sourceFileKey: string;
+  sourceNodeId: string;
+  description: string;
+}
+
+export interface ResolveComponentsData {
+  components: ResolvedComponent[];
+  cache: CacheMetadata;
+}
+
+export type ResolveComponentsResult = ResponseEnvelope<ResolveComponentsData>;
+
+// ─── extract_flows ───────────────────────────────────────────────────────────
+
+export interface ExtractFlowsInput {
+  file_key: string;
+  access_token: string;
+  node_id: string;
+}
+
+export interface FlowConnection {
+  fromNodeId: string;
+  fromNodeName: string;
+  toNodeId: string;
+  toNodeName: string;
+  trigger: string;
+  transitionType: string;
+}
+
+export interface ExtractFlowsData {
+  flows: FlowConnection[];
+  flowOrder: string[];
+  cache: CacheMetadata;
+}
+
+export type ExtractFlowsResult = ResponseEnvelope<ExtractFlowsData>;
+
+// ─── bridge_to_codebase ──────────────────────────────────────────────────────
+
+export interface BridgeToCodebaseInput {
+  file_key: string;
+  access_token: string;
+  project_path: string;
+  file_extensions?: string[] | undefined;
+}
+
+export interface CodebaseMapping {
+  figmaComponentName: string;
+  figmaComponentId: string;
+  matchedFile: string | null;
+  matchType: "exact" | "case-insensitive" | "partial" | "none";
+  confidence: number;
+}
+
+export interface BridgeToCodebaseData {
+  mappings: CodebaseMapping[];
+  cache: CacheMetadata;
+}
+
+export type BridgeToCodebaseResult = ResponseEnvelope<BridgeToCodebaseData>;
+
+// ─── diff_versions ───────────────────────────────────────────────────────────
+
+export interface DiffVersionsInput {
+  file_key: string;
+  access_token: string;
+  version_a: string;
+  version_b: string;
+}
+
+export interface NodeChange {
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  changes?: string[] | undefined;
+}
+
+export interface DiffVersionsData {
+  added: NodeChange[];
+  removed: NodeChange[];
+  modified: NodeChange[];
+  cache: { versionA: CacheMetadata; versionB: CacheMetadata };
+}
+
+export type DiffVersionsResult = ResponseEnvelope<DiffVersionsData>;
+
+// ─── extract_variants ────────────────────────────────────────────────────────
+
+export interface ExtractVariantsInput {
+  file_key: string;
+  access_token: string;
+  node_id: string;
+}
+
+export interface VariantInfo {
+  name: string;
+  properties: Record<string, string>;
+  dimensions: { width: number; height: number };
+  layoutInfo: {
+    layoutMode: string;
+    itemSpacing: number;
+    padding: { top: number; right: number; bottom: number; left: number };
+  };
+  styles: {
+    fills: import("./figma.js").Paint[];
+    typography?: Partial<import("./figma.js").TypeStyle> | undefined;
+  };
+}
+
+export interface ExtractVariantsData {
+  componentSetName: string;
+  variants: VariantInfo[];
+  cache: CacheMetadata;
+}
+
+export type ExtractVariantsResult = ResponseEnvelope<ExtractVariantsData>;
