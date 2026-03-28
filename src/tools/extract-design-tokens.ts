@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode, Color, Paint, StyleMetadata } from "../types/figma.js";
 import type {
   ExtractDesignTokensInput,
@@ -104,7 +105,7 @@ function collectColors(
         seen,
         paint,
         nodeId,
-        fillStyleId ? `style:${fillStyleId}` : `hex:${hex}`,
+        fillStyleId ? `style:${fillStyleId}` : `hex:${hex}@${paint.opacity ?? 1}`,
         fillStyleName ?? slugify(`color-${hex.slice(1)}`),
         fillStyleName
       );
@@ -114,7 +115,7 @@ function collectColors(
   for (const paint of strokes) {
     if (paint.type === "SOLID" && paint.color && paint.visible !== false) {
       const hex = colorToHex(paint.color);
-      addColorToken(seen, paint, nodeId, `hex:${hex}`, slugify(`color-${hex.slice(1)}`));
+      addColorToken(seen, paint, nodeId, `hex:${hex}@${paint.opacity ?? 1}`, slugify(`color-${hex.slice(1)}`));
     }
   }
 
@@ -286,13 +287,9 @@ export async function extractDesignTokens(
   const resolvedFormat = format ?? "css-variables";
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key },
-    freshness: {
-      cached: cache.fresh,
-      timestamp: cache.cachedAt,
-      ttl_ms: new Date(cache.expiresAt).getTime() - new Date(cache.cachedAt).getTime(),
-    },
+    freshness: buildFreshness(cache),
     warnings: [],
     data: { colors, typography, spacing, exported, format: resolvedFormat, cache },
   };

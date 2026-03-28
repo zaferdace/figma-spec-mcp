@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { ComponentMetadata, FigmaNode } from "../types/figma.js";
 import type {
   ResolveComponentsInput,
@@ -19,6 +20,14 @@ function collectInstances(node: FigmaNode, results: Array<{ instanceNodeId: stri
   }
 
   node.children?.forEach((child) => collectInstances(child, results));
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
 
 export async function resolveComponents(
@@ -48,6 +57,28 @@ export async function resolveComponents(
   const componentDetails = new Map<string, { file_key: string; node_id: string }>();
   const warnings: string[] = [];
   const resolved: ResolvedComponent[] = [];
+  const uniqueComponentKeys = Array.from(
+    new Set(
+      instances
+        .map((instance) => metadataById.get(instance.componentId)?.key)
+        .filter((componentKey): componentKey is string => Boolean(componentKey))
+    )
+  );
+
+  for (const keys of chunk(uniqueComponentKeys, 5)) {
+    const responses = await Promise.all(keys.map((componentKey) => client.getComponent(componentKey)));
+    responses.forEach((componentResponse, index) => {
+      const componentKey = keys[index];
+      if (!componentKey) {
+        return;
+      }
+
+      componentDetails.set(componentKey, {
+        file_key: componentResponse.data.file_key,
+        node_id: componentResponse.data.node_id,
+      });
+    });
+  }
 
   for (const instance of instances) {
     const metadata = metadataById.get(instance.componentId);
@@ -58,12 +89,8 @@ export async function resolveComponents(
 
     let detail = componentDetails.get(metadata.key);
     if (!detail) {
-      const componentResponse = await client.getComponent(metadata.key);
-      detail = {
-        file_key: componentResponse.data.file_key,
-        node_id: componentResponse.data.node_id,
-      };
-      componentDetails.set(metadata.key, detail);
+      warnings.push(`Missing component detail for key "${metadata.key}" referenced by instance "${instance.instanceNodeId}".`);
+      continue;
     }
 
     resolved.push({
@@ -79,13 +106,9 @@ export async function resolveComponents(
   const cache = fileResponse.cache;
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: input.node_id ? { file_key: input.file_key, node_id: input.node_id } : { file_key: input.file_key },
-    freshness: {
-      cached: cache.fresh,
-      timestamp: cache.cachedAt,
-      ttl_ms: new Date(cache.expiresAt).getTime() - new Date(cache.cachedAt).getTime(),
-    },
+    freshness: buildFreshness(cache),
     warnings,
     data: {
       components: resolved,

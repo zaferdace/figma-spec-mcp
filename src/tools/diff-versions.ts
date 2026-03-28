@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
 import type {
   DiffVersionsInput,
@@ -33,6 +34,39 @@ function getChanges(nodeA: FigmaNode, nodeB: FigmaNode): string[] {
   }
   if (stringify(nodeA.fills) !== stringify(nodeB.fills)) {
     changes.push("fills");
+  }
+  if (stringify(nodeA.characters) !== stringify(nodeB.characters)) {
+    changes.push("characters");
+  }
+  if (stringify(nodeA.strokes) !== stringify(nodeB.strokes)) {
+    changes.push("strokes");
+  }
+  if (stringify(nodeA.effects) !== stringify(nodeB.effects)) {
+    changes.push("effects");
+  }
+  if (stringify(nodeA.opacity) !== stringify(nodeB.opacity)) {
+    changes.push("opacity");
+  }
+  if (stringify(nodeA.cornerRadius) !== stringify(nodeB.cornerRadius)) {
+    changes.push("cornerRadius");
+  }
+  if (stringify(nodeA.layoutMode) !== stringify(nodeB.layoutMode)) {
+    changes.push("layoutMode");
+  }
+  if (stringify(nodeA.itemSpacing) !== stringify(nodeB.itemSpacing)) {
+    changes.push("itemSpacing");
+  }
+  if (stringify(nodeA.paddingTop) !== stringify(nodeB.paddingTop)) {
+    changes.push("paddingTop");
+  }
+  if (stringify(nodeA.paddingRight) !== stringify(nodeB.paddingRight)) {
+    changes.push("paddingRight");
+  }
+  if (stringify(nodeA.paddingBottom) !== stringify(nodeB.paddingBottom)) {
+    changes.push("paddingBottom");
+  }
+  if (stringify(nodeA.paddingLeft) !== stringify(nodeB.paddingLeft)) {
+    changes.push("paddingLeft");
   }
   if (stringify(nodeA.styles) !== stringify(nodeB.styles) || stringify(nodeA.style) !== stringify(nodeB.style)) {
     changes.push("style");
@@ -90,15 +124,12 @@ export async function diffVersions(
   });
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key },
     freshness: {
-      cached: versionAResponse.cache.fresh && versionBResponse.cache.fresh,
+      cached: buildFreshness(versionAResponse.cache).cached && buildFreshness(versionBResponse.cache).cached,
       timestamp: versionBResponse.cache.cachedAt,
-      ttl_ms: Math.min(
-        new Date(versionAResponse.cache.expiresAt).getTime() - new Date(versionAResponse.cache.cachedAt).getTime(),
-        new Date(versionBResponse.cache.expiresAt).getTime() - new Date(versionBResponse.cache.cachedAt).getTime()
-      ),
+      ttl_ms: Math.min(buildFreshness(versionAResponse.cache).ttl_ms, buildFreshness(versionBResponse.cache).ttl_ms),
     },
     warnings: [],
     data: {

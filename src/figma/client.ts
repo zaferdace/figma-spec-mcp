@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { FigmaComponentResponse, FigmaFileResponse, FigmaNode } from "../types/figma.js";
@@ -32,6 +32,16 @@ export interface FigmaClientOptions {
   disableCache?: boolean;
 }
 
+export class FigmaRateLimitError extends Error {
+  readonly retryAfterMs: number;
+
+  constructor(retryAfterMs: number) {
+    super(`Figma API rate limited. Retry after ${retryAfterMs}ms`);
+    this.name = "FigmaRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 export class FigmaClient {
   private readonly accessToken: string;
   private readonly ttlMs: number;
@@ -55,6 +65,15 @@ export class FigmaClient {
 
   private cachePath(key: string): string {
     return join(this.cacheDir, `${key}.json`);
+  }
+
+  private getFileCacheKey(fileKey: string, version?: string): string {
+    return this.cacheKey([fileKey, "file", version ?? "latest"]);
+  }
+
+  private getFileNodesCacheKey(fileKey: string, nodeIds: string[], fileVersion?: string): string {
+    const sortedIds = [...nodeIds].sort();
+    return this.cacheKey([fileKey, ...sortedIds, fileVersion ?? "latest"]);
   }
 
   private readCache<T>(key: string): CacheEntry<T> | null {
@@ -81,13 +100,13 @@ export class FigmaClient {
   }
 
   invalidateCache(fileKey: string, nodeId?: string): void {
-    const pattern = nodeId
-      ? this.cacheKey([fileKey, nodeId])
-      : this.cacheKey([fileKey]);
+    if (this.disableCache) return;
 
-    const path = this.cachePath(pattern);
+    const key = nodeId ? this.getFileNodesCacheKey(fileKey, [nodeId]) : this.getFileCacheKey(fileKey);
+
+    const path = this.cachePath(key);
     if (existsSync(path)) {
-      writeFileSync(path, "");
+      unlinkSync(path);
     }
   }
 
@@ -116,6 +135,12 @@ export class FigmaClient {
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        const retryAfterHeader = response.headers.get("Retry-After");
+        const retryAfterMs = this.parseRetryAfterMs(retryAfterHeader);
+        throw new FigmaRateLimitError(retryAfterMs);
+      }
+
       const body = await response.text();
       throw new Error(`Figma API error ${response.status}: ${body}`);
     }
@@ -123,8 +148,26 @@ export class FigmaClient {
     return response.json() as Promise<T>;
   }
 
+  private parseRetryAfterMs(retryAfterHeader: string | null): number {
+    if (!retryAfterHeader) {
+      return 1000;
+    }
+
+    const seconds = Number(retryAfterHeader);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return seconds * 1000;
+    }
+
+    const retryAt = Date.parse(retryAfterHeader);
+    if (!Number.isNaN(retryAt)) {
+      return Math.max(retryAt - Date.now(), 0);
+    }
+
+    return 1000;
+  }
+
   async getFile(fileKey: string, version?: string): Promise<CachedResult<FigmaFileResponse>> {
-    const key = this.cacheKey([fileKey, "file", version ?? "latest"]);
+    const key = this.getFileCacheKey(fileKey, version);
     const cached = this.readCache<FigmaFileResponse>(key);
 
     if (cached && Date.now() < cached.expiresAt) {
@@ -144,8 +187,7 @@ export class FigmaClient {
     nodeIds: string[],
     fileVersion?: string
   ): Promise<CachedResult<{ nodes: Record<string, { document: FigmaNode }> }>> {
-    const sortedIds = [...nodeIds].sort();
-    const key = this.cacheKey([fileKey, ...sortedIds]);
+    const key = this.getFileNodesCacheKey(fileKey, nodeIds, fileVersion);
     const cached = this.readCache<{ nodes: Record<string, { document: FigmaNode }> }>(key);
 
     if (cached && Date.now() < cached.expiresAt) {

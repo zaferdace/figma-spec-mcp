@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
 import type {
   ExtractFlowsInput,
@@ -82,6 +83,17 @@ function topoSortFrameIds(frameIds: string[], flows: FlowConnection[]): string[]
 
   const queue = frameIds.filter((id) => (inDegree.get(id) ?? 0) === 0).sort();
   const order: string[] = [];
+  const insertSorted = (value: string): void => {
+    let index = queue.length;
+    while (index > 0) {
+      const previous = queue[index - 1];
+      if (!previous || previous <= value) {
+        break;
+      }
+      index -= 1;
+    }
+    queue.splice(index, 0, value);
+  };
 
   while (queue.length > 0) {
     const current = queue.shift();
@@ -93,8 +105,7 @@ function topoSortFrameIds(frameIds: string[], flows: FlowConnection[]): string[]
       const nextDegree = (inDegree.get(target) ?? 0) - 1;
       inDegree.set(target, nextDegree);
       if (nextDegree === 0) {
-        queue.push(target);
-        queue.sort();
+        insertSorted(target);
       }
     });
   }
@@ -130,13 +141,9 @@ export async function extractFlows(
   collectFlowEdges(root, nodes, nodeToFrame, new Set<string>(), flows);
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key, node_id: input.node_id },
-    freshness: {
-      cached: response.cache.fresh,
-      timestamp: response.cache.cachedAt,
-      ttl_ms: new Date(response.cache.expiresAt).getTime() - new Date(response.cache.cachedAt).getTime(),
-    },
+    freshness: buildFreshness(response.cache),
     warnings: [],
     data: {
       flows,

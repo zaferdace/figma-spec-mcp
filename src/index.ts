@@ -16,6 +16,7 @@ import { extractFlows, extractFlowsSchema } from "./tools/extract-flows.js";
 import { bridgeToCodebase, bridgeToCodebaseSchema } from "./tools/bridge-to-codebase.js";
 import { diffVersions, diffVersionsSchema } from "./tools/diff-versions.js";
 import { extractVariants, extractVariantsSchema } from "./tools/extract-variants.js";
+import { SERVER_VERSION } from "./shared.js";
 
 const tools: Tool[] = [
   {
@@ -69,7 +70,7 @@ const tools: Tool[] = [
 ];
 
 const server = new Server(
-  { name: "figma-spec", version: "0.1.0" },
+  { name: "figma-spec", version: SERVER_VERSION },
   { capabilities: { tools: {} } }
 );
 

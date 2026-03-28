@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
 import type {
   BridgeToCodebaseInput,
@@ -174,13 +175,9 @@ export async function bridgeToCodebase(
   });
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key },
-    freshness: {
-      cached: cache.fresh,
-      timestamp: cache.cachedAt,
-      ttl_ms: new Date(cache.expiresAt).getTime() - new Date(cache.cachedAt).getTime(),
-    },
+    freshness: buildFreshness(cache),
     warnings: [],
     data: {
       mappings,

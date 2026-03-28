@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
+import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode, TypeStyle } from "../types/figma.js";
 import type {
   ExtractVariantsInput,
@@ -89,13 +90,9 @@ export async function extractVariants(
   }
 
   return {
-    schema_version: "0.1.0",
+    schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key, node_id: input.node_id },
-    freshness: {
-      cached: response.cache.fresh,
-      timestamp: response.cache.cachedAt,
-      ttl_ms: new Date(response.cache.expiresAt).getTime() - new Date(response.cache.cachedAt).getTime(),
-    },
+    freshness: buildFreshness(response.cache),
     warnings: [],
     data: {
       componentSetName: componentSet.name,

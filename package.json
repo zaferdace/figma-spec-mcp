@@ -1,6 +1,6 @@
 {
   "name": "figma-spec",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Engineering-grade Figma audits and platform-ready specs for AI agents",
   "keywords": [
     "figma",
