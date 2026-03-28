@@ -7,6 +7,7 @@ import type {
   ExtractVariantsResult,
   VariantInfo,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const extractVariantsSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -101,3 +102,11 @@ export async function extractVariants(
     },
   };
 }
+
+registerTool({
+  name: "extract_variants",
+  description:
+    "Reads a Figma component set and returns structured variant data including parsed variant properties, dimensions, layout details, fills, and typography from text descendants.",
+  schema: extractVariantsSchema,
+  handler: extractVariants,
+});

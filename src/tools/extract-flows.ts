@@ -7,6 +7,7 @@ import type {
   ExtractFlowsResult,
   FlowConnection,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const extractFlowsSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -152,3 +153,11 @@ export async function extractFlows(
     },
   };
 }
+
+registerTool({
+  name: "extract_flows",
+  description:
+    "Extracts prototype flows from a page or frame by finding transition links in the node tree, then returns directed frame-to-frame connections and a deterministic traversal order.",
+  schema: extractFlowsSchema,
+  handler: extractFlows,
+});

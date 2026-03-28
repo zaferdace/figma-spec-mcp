@@ -9,6 +9,7 @@ import type {
   BridgeToCodebaseResult,
   CodebaseMapping,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const bridgeToCodebaseSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -185,3 +186,11 @@ export async function bridgeToCodebase(
     },
   };
 }
+
+registerTool({
+  name: "bridge_to_codebase",
+  description:
+    "Scans Figma components and a local codebase, then maps component names to likely implementation files using exact, case-insensitive, and partial filename matching.",
+  schema: bridgeToCodebaseSchema,
+  handler: bridgeToCodebase,
+});

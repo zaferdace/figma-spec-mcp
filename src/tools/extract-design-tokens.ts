@@ -9,6 +9,7 @@ import type {
   TypographyToken,
   SpacingToken,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const extractDesignTokensSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -294,3 +295,11 @@ export async function extractDesignTokens(
     data: { colors, typography, spacing, exported, format: resolvedFormat, cache },
   };
 }
+
+registerTool({
+  name: "extract_design_tokens",
+  description:
+    "Extracts all design tokens (colors, typography, spacing) from a Figma file and exports them in your chosen format: CSS custom properties (DTCG-aligned), Style Dictionary JSON, or Tailwind config. Spacing tokens are sourced from auto-layout padding and gap values. Each token includes source node IDs for traceability.",
+  schema: extractDesignTokensSchema,
+  handler: extractDesignTokens,
+});

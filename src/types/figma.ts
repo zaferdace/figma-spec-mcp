@@ -3,6 +3,7 @@ export interface FigmaNode {
   name: string;
   type: string;
   componentId?: string;
+  description?: string;
   children?: FigmaNode[];
   styles?: Record<string, string>;
   absoluteBoundingBox?: BoundingBox;
@@ -29,6 +30,7 @@ export interface FigmaNode {
   transitionNodeID?: string;
   transitionDuration?: number;
   transitionEasing?: object;
+  reactions?: Array<{ action?: { type?: string } }>;
   annotations?: Array<{
     label: string;
     properties: Array<{ type: string; value?: string }>;

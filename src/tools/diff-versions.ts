@@ -7,6 +7,7 @@ import type {
   DiffVersionsResult,
   NodeChange,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const diffVersionsSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -143,3 +144,11 @@ export async function diffVersions(
     },
   };
 }
+
+registerTool({
+  name: "diff_versions",
+  description:
+    "Fetches two Figma file versions and reports added, removed, and modified nodes by comparing names, types, geometry, fills, and style properties.",
+  schema: diffVersionsSchema,
+  handler: diffVersions,
+});

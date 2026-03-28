@@ -9,6 +9,7 @@ import type {
   UnityRectTransform,
   UnityLayoutGroup,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const mapToUnitySchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -225,3 +226,11 @@ export async function mapToUnity(
     },
   };
 }
+
+registerTool({
+  name: "map_to_unity",
+  description:
+    "Produces a Unity UGUI mapping spec from a Figma frame. Maps Figma constraints to RectTransform anchors, auto-layout to HorizontalLayoutGroup/VerticalLayoutGroup, and suggests appropriate Unity components per node type. Includes confidence scores for inferred components and warnings for unknown constraints or unsupported effects.",
+  schema: mapToUnitySchema,
+  handler: mapToUnity,
+});

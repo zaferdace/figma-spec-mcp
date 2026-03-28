@@ -7,6 +7,7 @@ import type {
   ResolveComponentsResult,
   ResolvedComponent,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const resolveComponentsSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -116,3 +117,11 @@ export async function resolveComponents(
     },
   };
 }
+
+registerTool({
+  name: "resolve_components",
+  description:
+    "Scans a Figma subtree or full file for instances, resolves each unique component through the file component map and Figma component API, and returns the source file and node for each instance.",
+  schema: resolveComponentsSchema,
+  handler: resolveComponents,
+});

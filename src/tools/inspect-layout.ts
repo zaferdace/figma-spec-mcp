@@ -12,6 +12,7 @@ import type {
   TextRun,
   AnnotationInfo,
 } from "../types/tools.js";
+import { registerTool } from "./registry.js";
 
 export const inspectLayoutSchema = z.object({
   file_key: z.string().describe("The Figma file key (from the file URL)"),
@@ -348,3 +349,11 @@ export async function inspectLayout(
     },
   };
 }
+
+registerTool({
+  name: "inspect_layout",
+  description:
+    "Inspects a Figma frame and returns deterministic layout data: node hierarchy, auto-layout vs absolute positioning, spacing, padding, constraints, and accessibility warnings (touch targets, font sizes). Output is a versioned JSON envelope — stable and predictable for downstream tooling.",
+  schema: inspectLayoutSchema,
+  handler: inspectLayout,
+});

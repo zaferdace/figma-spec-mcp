@@ -76,6 +76,16 @@ export class FigmaClient {
     return this.cacheKey([fileKey, ...sortedIds, fileVersion ?? "latest"]);
   }
 
+  private getImagesCacheKey(
+    fileKey: string,
+    nodeIds: string[],
+    format: "png" | "jpg" | "svg" | "pdf",
+    scale: number
+  ): string {
+    const sortedIds = [...nodeIds].sort();
+    return this.cacheKey([fileKey, "images", format, String(scale), ...sortedIds]);
+  }
+
   private readCache<T>(key: string): CacheEntry<T> | null {
     if (this.disableCache) return null;
     const path = this.cachePath(key);
@@ -232,6 +242,30 @@ export class FigmaClient {
     const data = await this.request<FigmaComponentResponse>(`/components/${componentKey}`);
     this.writeCache(key, data, "unknown");
     const entry = this.readCache<FigmaComponentResponse>(key);
+    const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata("unknown");
+    return { data, cache };
+  }
+
+  async getImages(
+    fileKey: string,
+    nodeIds: string[],
+    format: "png" | "jpg" | "svg" | "pdf",
+    scale: number
+  ): Promise<CachedResult<{ images: Record<string, string | null> }>> {
+    const key = this.getImagesCacheKey(fileKey, nodeIds, format, scale);
+    const cached = this.readCache<{ images: Record<string, string | null> }>(key);
+
+    if (cached && Date.now() < cached.expiresAt) {
+      return { data: cached.data, cache: this.buildCacheMetadata(cached) };
+    }
+
+    const ids = nodeIds.join(",");
+    const data = await this.request<{ images: Record<string, string | null> }>(
+      `/images/${fileKey}?ids=${encodeURIComponent(ids)}&format=${encodeURIComponent(format)}&scale=${encodeURIComponent(String(scale))}`
+    );
+
+    this.writeCache(key, data, "unknown");
+    const entry = this.readCache<{ images: Record<string, string | null> }>(key);
     const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata("unknown");
     return { data, cache };
   }

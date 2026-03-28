@@ -319,3 +319,82 @@ export interface ExtractVariantsData {
 }
 
 export type ExtractVariantsResult = ResponseEnvelope<ExtractVariantsData>;
+
+// ─── export_images ───────────────────────────────────────────────────────────
+
+export interface ExportImagesInput {
+  file_key: string;
+  access_token: string;
+  node_ids: string[];
+  format?: "png" | "jpg" | "svg" | "pdf";
+  scale?: number;
+}
+
+export interface ExportedImage {
+  nodeId: string;
+  nodeName: string;
+  imageUrl: string | null;
+  format: "png" | "jpg" | "svg" | "pdf";
+  scale: number;
+}
+
+export interface ExportImagesResult extends ResponseEnvelope<{
+  images: ExportedImage[];
+  cache: CacheMetadata;
+}> {}
+
+// ─── audit_accessibility ─────────────────────────────────────────────────────
+
+export interface AuditAccessibilityInput {
+  file_key: string;
+  access_token: string;
+  node_id: string;
+}
+
+export interface AccessibilityAuditIssue {
+  nodeId: string;
+  nodeName: string;
+  rule: string;
+  severity: "error" | "warning" | "info";
+  message: string;
+  details: string;
+}
+
+export interface AuditAccessibilityResult extends ResponseEnvelope<{
+  issues: AccessibilityAuditIssue[];
+  summary: { errors: number; warnings: number; info: number; score: number };
+  cache: CacheMetadata;
+}> {}
+
+// ─── simplify_context ────────────────────────────────────────────────────────
+
+export interface SimplifyContextInput {
+  file_key: string;
+  access_token: string;
+  node_id: string;
+  max_tokens?: number | undefined;
+  framework?: "web" | "react" | "unity" | "swiftui" | undefined;
+}
+
+export interface SimplifiedNode {
+  id: string;
+  name: string;
+  type: string;
+  text?: string | undefined;
+  layout?: Record<string, number | string> | undefined;
+  style?: Record<string, string | number> | undefined;
+  size?: { width: number; height: number } | undefined;
+  hints?: string[] | undefined;
+  count?: number | undefined;
+  children?: SimplifiedNode[] | undefined;
+}
+
+export interface SimplifyContextData {
+  framework?: "web" | "react" | "unity" | "swiftui" | undefined;
+  truncated: boolean;
+  estimated_tokens: number;
+  tree: SimplifiedNode | null;
+  cache: CacheMetadata;
+}
+
+export type SimplifyContextResult = ResponseEnvelope<SimplifyContextData>;
