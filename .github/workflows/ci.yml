@@ -25,14 +25,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Format check
-        run: npm run format:check
-
-      - name: Publish readiness
-        run: npm run publint
+      - name: Quality checks
+        run: npm run check
