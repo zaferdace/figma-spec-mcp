@@ -63,17 +63,19 @@ export async function resolveComponents(
   );
 
   for (const keys of chunk(uniqueComponentKeys, 5)) {
-    const responses = await Promise.all(keys.map((componentKey) => client.getComponent(componentKey)));
-    responses.forEach((componentResponse, index) => {
+    const results = await Promise.allSettled(keys.map((componentKey) => client.getComponent(componentKey)));
+    results.forEach((result, index) => {
       const componentKey = keys[index];
-      if (!componentKey) {
-        return;
-      }
+      if (!componentKey) return;
 
-      componentDetails.set(componentKey, {
-        file_key: componentResponse.data.meta.file_key,
-        node_id: componentResponse.data.meta.node_id,
-      });
+      if (result.status === "fulfilled") {
+        componentDetails.set(componentKey, {
+          file_key: result.value.data.meta.file_key,
+          node_id: result.value.data.meta.node_id,
+        });
+      } else {
+        warnings.push(`Could not resolve component "${componentKey}" — may be from an external library.`);
+      }
     });
   }
 
