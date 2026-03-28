@@ -338,10 +338,10 @@ export interface ExportedImage {
   scale: number;
 }
 
-export interface ExportImagesResult extends ResponseEnvelope<{
+export type ExportImagesResult = ResponseEnvelope<{
   images: ExportedImage[];
   cache: CacheMetadata;
-}> {}
+}>;
 
 // ─── audit_accessibility ─────────────────────────────────────────────────────
 
@@ -360,11 +360,11 @@ export interface AccessibilityAuditIssue {
   details: string;
 }
 
-export interface AuditAccessibilityResult extends ResponseEnvelope<{
+export type AuditAccessibilityResult = ResponseEnvelope<{
   issues: AccessibilityAuditIssue[];
   summary: { errors: number; warnings: number; info: number; score: number };
   cache: CacheMetadata;
-}> {}
+}>;
 
 // ─── simplify_context ────────────────────────────────────────────────────────
 

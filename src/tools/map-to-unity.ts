@@ -111,12 +111,8 @@ function buildLayoutGroup(node: FigmaNode): UnityLayoutGroup | undefined {
     },
     childAlignment: alignMap[node.primaryAxisAlignItems ?? "MIN"] ?? "UpperLeft",
     // primaryAxis controls the layout direction; counterAxis controls the cross axis
-    controlWidth: isHorizontal
-      ? node.primaryAxisSizingMode === "AUTO"
-      : node.counterAxisSizingMode === "AUTO",
-    controlHeight: isHorizontal
-      ? node.counterAxisSizingMode === "AUTO"
-      : node.primaryAxisSizingMode === "AUTO",
+    controlWidth: isHorizontal ? node.primaryAxisSizingMode === "AUTO" : node.counterAxisSizingMode === "AUTO",
+    controlHeight: isHorizontal ? node.counterAxisSizingMode === "AUTO" : node.primaryAxisSizingMode === "AUTO",
   };
 }
 

@@ -23,9 +23,9 @@ export function getToolDefinitions(): Tool[] {
   return Array.from(registry.values())
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((reg) => ({
-    name: reg.name,
-    description: reg.description,
-    inputSchema: zodToJsonSchema(reg.schema) as Tool["inputSchema"],
+      name: reg.name,
+      description: reg.description,
+      inputSchema: zodToJsonSchema(reg.schema) as Tool["inputSchema"],
     }));
 }
 

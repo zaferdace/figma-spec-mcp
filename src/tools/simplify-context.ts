@@ -141,7 +141,10 @@ function groupSiblings(children: SimplifiedNode[]): SimplifiedNode[] {
 
     const signature = siblingSignature(current);
     let count = 1;
-    while (index + count < children.length && siblingSignature(children[index + count] as SimplifiedNode) === signature) {
+    while (
+      index + count < children.length &&
+      siblingSignature(children[index + count] as SimplifiedNode) === signature
+    ) {
       count += 1;
     }
 
@@ -152,7 +155,11 @@ function groupSiblings(children: SimplifiedNode[]): SimplifiedNode[] {
   return grouped;
 }
 
-function simplifyNode(node: FigmaNode, state: SimplifyState, framework?: SimplifyContextInput["framework"]): SimplifiedNode | null {
+function simplifyNode(
+  node: FigmaNode,
+  state: SimplifyState,
+  framework?: SimplifyContextInput["framework"]
+): SimplifiedNode | null {
   if (state.remainingNodes <= 0) {
     state.truncated = true;
     return null;
