@@ -1,6 +1,6 @@
 # figma-spec-mcp
 
-![Version: 0.4.0](https://img.shields.io/badge/version-0.4.0-blue)
+![Version: 1.0.0-beta.1](https://img.shields.io/badge/version-1.0.0--beta.1-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
@@ -27,7 +27,7 @@ Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, V
   "mcpServers": {
     "figma-spec-mcp": {
       "command": "npx",
-      "args": ["-y", "figma-spec-mcp"]
+      "args": ["-y", "figma-spec-mcp@beta"]
     }
   }
 }

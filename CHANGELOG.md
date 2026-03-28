@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-03-30
+## [1.0.0-beta.1] - 2026-03-28
+
+### Added
+- ESLint (typescript-eslint strict) + Prettier formatting
+- publint for npm publish validation
+- CI pipeline: lint + format check + publint + SonarCloud
+- `npm run check` script for all validations
+- GitHub Actions publish workflow (tag-based, beta/latest channels)
+- `exports` field in package.json for modern Node.js
+
+### Changed
+- Version bump to 1.0.0-beta.1 (semver: first public pre-release)
+- Renamed from `figma-spec` to `figma-spec-mcp` for discoverability
+
+## [0.4.0] - 2026-03-28
 
 ### Added
 - Registry-based tool registration via `src/tools/registry.ts` and `src/tools/register-all.ts`

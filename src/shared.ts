@@ -1,7 +1,7 @@
 import type { CacheMetadata } from "./figma/client.js";
 
 export const SCHEMA_VERSION = "0.1.0" as const;
-export const SERVER_VERSION = "0.4.0";
+export const SERVER_VERSION = "1.0.0-beta.1";
 
 export function buildFreshness(cache: CacheMetadata): { fresh: boolean; timestamp: string; ttl_ms: number } {
   return {
