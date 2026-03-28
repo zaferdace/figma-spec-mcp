@@ -1,7 +1,7 @@
 {
   "name": "figma-spec",
   "version": "0.4.0",
-  "description": "Engineering-grade Figma audits and platform-ready specs for AI agents",
+  "description": "MCP server for Figma — layout audit, design tokens, accessibility, Unity mapping, and AI-optimized specs",
   "keywords": [
     "figma",
     "mcp",
