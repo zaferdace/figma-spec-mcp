@@ -2,11 +2,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { Color, FigmaNode, Paint } from "../types/figma.js";
-import type {
-  AccessibilityAuditIssue,
-  AuditAccessibilityInput,
-  AuditAccessibilityResult,
-} from "../types/tools.js";
+import type { AccessibilityAuditIssue, AuditAccessibilityInput, AuditAccessibilityResult } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
 export const auditAccessibilitySchema = z.object({
@@ -16,7 +12,9 @@ export const auditAccessibilitySchema = z.object({
 });
 
 function getSolidPaintColor(paints: Paint[] | undefined, opacity = 1): Color | null {
-  const paint = paints?.find((candidate) => candidate.type === "SOLID" && candidate.visible !== false && candidate.color);
+  const paint = paints?.find(
+    (candidate) => candidate.type === "SOLID" && candidate.visible !== false && candidate.color
+  );
   if (!paint?.color) {
     return null;
   }
@@ -30,8 +28,7 @@ function getSolidPaintColor(paints: Paint[] | undefined, opacity = 1): Color | n
 }
 
 function relativeLuminance(color: Color): number {
-  const convert = (value: number): number =>
-    value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  const convert = (value: number): number => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
   const r = convert(color.r);
   const g = convert(color.g);
   const b = convert(color.b);
@@ -168,7 +165,14 @@ function auditNode(
     node.name.toLowerCase() === "img" ||
     (node.fills ?? []).some((paint) => paint.type === "IMAGE");
   if (isImageLike && !node.description?.trim()) {
-    pushIssue(issues, node, "missing-alt-text", "warning", "Image-like node is missing description text.", "description=empty");
+    pushIssue(
+      issues,
+      node,
+      "missing-alt-text",
+      "warning",
+      "Image-like node is missing description text.",
+      "description=empty"
+    );
   }
 
   const fillColor = getSolidPaintColor(node.fills, node.opacity ?? 1);

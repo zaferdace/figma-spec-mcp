@@ -2,11 +2,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { ComponentMetadata, FigmaNode } from "../types/figma.js";
-import type {
-  ResolveComponentsInput,
-  ResolveComponentsResult,
-  ResolvedComponent,
-} from "../types/tools.js";
+import type { ResolveComponentsInput, ResolveComponentsResult, ResolvedComponent } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
 export const resolveComponentsSchema = z.object({
@@ -88,9 +84,11 @@ export async function resolveComponents(
       continue;
     }
 
-    let detail = componentDetails.get(metadata.key);
+    const detail = componentDetails.get(metadata.key);
     if (!detail) {
-      warnings.push(`Missing component detail for key "${metadata.key}" referenced by instance "${instance.instanceNodeId}".`);
+      warnings.push(
+        `Missing component detail for key "${metadata.key}" referenced by instance "${instance.instanceNodeId}".`
+      );
       continue;
     }
 

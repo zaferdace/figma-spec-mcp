@@ -65,7 +65,10 @@ function collectTextRuns(node: FigmaNode): TextRun[] | undefined {
   return runs;
 }
 
-function getFrameworkHints(node: FigmaNode, framework: InspectLayoutInput["framework"]): Record<string, string> | undefined {
+function getFrameworkHints(
+  node: FigmaNode,
+  framework: InspectLayoutInput["framework"]
+): Record<string, string> | undefined {
   if (!framework) {
     return undefined;
   }
@@ -81,8 +84,7 @@ function getFrameworkHints(node: FigmaNode, framework: InspectLayoutInput["frame
         hints["component"] = "Image component";
       }
       if (node.type === "FRAME" && isLayoutNode(node)) {
-        hints["layout"] =
-          node.layoutMode === "HORIZONTAL" ? "HorizontalLayoutGroup" : "VerticalLayoutGroup";
+        hints["layout"] = node.layoutMode === "HORIZONTAL" ? "HorizontalLayoutGroup" : "VerticalLayoutGroup";
       }
       break;
     case "react":
@@ -123,8 +125,7 @@ function walkHierarchy(
   results: NodeSummary[],
   state: { truncatedAtDepth: boolean }
 ): void {
-  const positioningMode =
-    node.layoutMode && node.layoutMode !== "NONE" ? "auto-layout" : "absolute";
+  const positioningMode = node.layoutMode && node.layoutMode !== "NONE" ? "auto-layout" : "absolute";
 
   results.push({
     id: node.id,
@@ -239,8 +240,7 @@ function collectAccessibilityWarnings(
 
   if (node.absoluteBoundingBox) {
     const { width, height } = node.absoluteBoundingBox;
-    const isInteractiveType =
-      node.type === "COMPONENT" || node.type === "INSTANCE" || node.type === "FRAME";
+    const isInteractiveType = node.type === "COMPONENT" || node.type === "INSTANCE" || node.type === "FRAME";
 
     if (isInteractiveType && (width < MIN_TOUCH_TARGET_PX || height < MIN_TOUCH_TARGET_PX)) {
       warnings.push({
@@ -261,9 +261,7 @@ function collectAccessibilityWarnings(
     return;
   }
 
-  node.children?.forEach((child) =>
-    collectAccessibilityWarnings(child, depth + 1, maxDepth, warnings, state)
-  );
+  node.children?.forEach((child) => collectAccessibilityWarnings(child, depth + 1, maxDepth, warnings, state));
 }
 
 function collectAnnotations(

@@ -2,11 +2,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode, TypeStyle } from "../types/figma.js";
-import type {
-  ExtractVariantsInput,
-  ExtractVariantsResult,
-  VariantInfo,
-} from "../types/tools.js";
+import type { ExtractVariantsInput, ExtractVariantsResult, VariantInfo } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
 export const extractVariantsSchema = z.object({

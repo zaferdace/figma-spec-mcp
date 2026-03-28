@@ -2,11 +2,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
-import type {
-  ExtractFlowsInput,
-  ExtractFlowsResult,
-  FlowConnection,
-} from "../types/tools.js";
+import type { ExtractFlowsInput, ExtractFlowsResult, FlowConnection } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
 export const extractFlowsSchema = z.object({
@@ -45,7 +41,7 @@ function collectFlowEdges(
   if (node.transitionNodeID) {
     const fromFrame = nodeToFrame.get(node.id);
     const targetNode = nodes.get(node.transitionNodeID);
-    const toFrame = targetNode ? nodeToFrame.get(targetNode.id) ?? targetNode : undefined;
+    const toFrame = targetNode ? (nodeToFrame.get(targetNode.id) ?? targetNode) : undefined;
 
     if (fromFrame) {
       const toNodeId = toFrame?.id ?? node.transitionNodeID;

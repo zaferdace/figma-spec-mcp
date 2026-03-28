@@ -4,11 +4,7 @@ import { z } from "zod";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
-import type {
-  BridgeToCodebaseInput,
-  BridgeToCodebaseResult,
-  CodebaseMapping,
-} from "../types/tools.js";
+import type { BridgeToCodebaseInput, BridgeToCodebaseResult, CodebaseMapping } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
 export const bridgeToCodebaseSchema = z.object({
@@ -57,7 +53,13 @@ function shouldIgnore(relativePath: string, patterns: string[]): boolean {
   });
 }
 
-function scanProjectFiles(projectPath: string, extensions: Set<string>, patterns: string[], results: string[], currentPath = projectPath): void {
+function scanProjectFiles(
+  projectPath: string,
+  extensions: Set<string>,
+  patterns: string[],
+  results: string[],
+  currentPath = projectPath
+): void {
   const entries = readdirSync(currentPath, { withFileTypes: true });
 
   entries.forEach((entry) => {
@@ -122,11 +124,9 @@ function scoreMatch(componentName: string, filePath: string): CodebaseMapping {
     };
   }
 
-  if (
-    normalizedComponent.includes(normalizedFile) ||
-    normalizedFile.includes(normalizedComponent)
-  ) {
-    const ratio = Math.min(normalizedComponent.length, normalizedFile.length) /
+  if (normalizedComponent.includes(normalizedFile) || normalizedFile.includes(normalizedComponent)) {
+    const ratio =
+      Math.min(normalizedComponent.length, normalizedFile.length) /
       Math.max(normalizedComponent.length, normalizedFile.length);
     return {
       figmaComponentName: componentName,
@@ -154,7 +154,9 @@ export async function bridgeToCodebase(
   const components: Array<{ id: string; name: string }> = [];
   collectComponents(file.document, components);
 
-  const extensions = new Set((input.file_extensions ?? [".tsx", ".jsx", ".vue", ".svelte", ".cs"]).map((ext) => ext.toLowerCase()));
+  const extensions = new Set(
+    (input.file_extensions ?? [".tsx", ".jsx", ".vue", ".svelte", ".cs"]).map((ext) => ext.toLowerCase())
+  );
   const projectFiles: string[] = [];
   scanProjectFiles(input.project_path, extensions, loadGitignorePatterns(input.project_path), projectFiles);
 

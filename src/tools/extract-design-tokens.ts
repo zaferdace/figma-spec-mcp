@@ -158,13 +158,9 @@ function collectTypography(
 }
 
 function collectSpacing(node: FigmaNode, seen: Map<string, SpacingToken>): void {
-  const values = [
-    node.paddingTop,
-    node.paddingRight,
-    node.paddingBottom,
-    node.paddingLeft,
-    node.itemSpacing,
-  ].filter((v): v is number => v !== undefined && v > 0);
+  const values = [node.paddingTop, node.paddingRight, node.paddingBottom, node.paddingLeft, node.itemSpacing].filter(
+    (v): v is number => v !== undefined && v > 0
+  );
 
   for (const value of values) {
     const key = String(value);
