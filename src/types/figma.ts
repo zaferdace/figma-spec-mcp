@@ -110,9 +110,16 @@ export interface ComponentMetadata {
   documentationLinks?: { uri: string }[];
 }
 
-export interface FigmaComponentResponse extends ComponentMetadata {
-  file_key: string;
-  node_id: string;
+export interface FigmaComponentResponse {
+  status: number;
+  error: boolean;
+  meta: {
+    key: string;
+    file_key: string;
+    node_id: string;
+    name: string;
+    description: string;
+  };
 }
 
 export interface StyleMetadata {

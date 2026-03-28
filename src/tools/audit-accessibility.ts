@@ -58,14 +58,14 @@ function hasUnsupportedBackground(paints: Paint[] | undefined): boolean {
   return (paints ?? []).some((paint) => paint.visible !== false && paint.type !== "SOLID");
 }
 
-function findBackgroundColor(parent: FigmaNode | null): Color | null {
-  let current = parent;
+function findBackgroundColor(node: FigmaNode | null, parents: Map<string, FigmaNode>): Color | null {
+  let current = node;
   while (current) {
     const backgroundColor = getSolidPaintColor(current.fills, current.opacity ?? 1);
     if (backgroundColor) {
       return backgroundColor;
     }
-    current = null;
+    current = parents.get(current.id) ?? null;
   }
 
   return null;
@@ -108,6 +108,7 @@ interface ColorSignatureEntry {
 function auditNode(
   node: FigmaNode,
   parent: FigmaNode | null,
+  parents: Map<string, FigmaNode>,
   issues: AccessibilityAuditIssue[],
   colorSignatureEntries: ColorSignatureEntry[]
 ): void {
@@ -118,7 +119,7 @@ function auditNode(
     }
 
     const textColor = getSolidPaintColor(node.fills, node.opacity ?? 1);
-    const backgroundColor = findBackgroundColor(parent);
+    const backgroundColor = findBackgroundColor(parent, parents);
     if (textColor && backgroundColor) {
       const compositedTextColor = compositeTextOverBackground(textColor, backgroundColor);
       const ratio = contrastRatio(compositedTextColor, backgroundColor);
@@ -183,7 +184,10 @@ function auditNode(
     });
   }
 
-  node.children?.forEach((child) => auditNode(child, node, issues, colorSignatureEntries));
+  node.children?.forEach((child) => {
+    parents.set(child.id, node);
+    auditNode(child, node, parents, issues, colorSignatureEntries);
+  });
 }
 
 function auditColorOnly(entries: ColorSignatureEntry[], issues: AccessibilityAuditIssue[]): void {
@@ -238,7 +242,8 @@ export async function auditAccessibility(
 
   const issues: AccessibilityAuditIssue[] = [];
   const colorSignatureEntries: ColorSignatureEntry[] = [];
-  auditNode(root, null, issues, colorSignatureEntries);
+  const parents = new Map<string, FigmaNode>();
+  auditNode(root, null, parents, issues, colorSignatureEntries);
   auditColorOnly(colorSignatureEntries, issues);
 
   const errors = issues.filter((issue) => issue.severity === "error").length;

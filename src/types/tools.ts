@@ -7,7 +7,7 @@ export type { CacheMetadata };
 export interface ResponseEnvelope<T> {
   schema_version: "0.1.0";
   source: { file_key: string; node_id?: string };
-  freshness: { cached: boolean; timestamp: string; ttl_ms: number };
+  freshness: { fresh: boolean; timestamp: string; ttl_ms: number };
   warnings: string[];
   data: T;
 }

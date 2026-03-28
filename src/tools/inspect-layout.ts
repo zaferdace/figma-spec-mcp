@@ -155,10 +155,11 @@ function collectAutoLayouts(
   state: { truncatedAtDepth: boolean }
 ): void {
   if (node.layoutMode && node.layoutMode !== "NONE") {
+    const isHorizontal = node.layoutMode === "HORIZONTAL";
     results.push({
       nodeId: node.id,
       nodeName: node.name,
-      mode: node.layoutMode === "HORIZONTAL" ? "horizontal" : "vertical",
+      mode: isHorizontal ? "horizontal" : "vertical",
       primaryAxisAlign: node.primaryAxisAlignItems ?? "MIN",
       counterAxisAlign: node.counterAxisAlignItems ?? "MIN",
       padding: {
@@ -169,8 +170,8 @@ function collectAutoLayouts(
       },
       gap: node.itemSpacing ?? 0,
       sizing: {
-        width: node.primaryAxisSizingMode === "AUTO" ? "hug" : "fixed",
-        height: node.counterAxisSizingMode === "AUTO" ? "hug" : "fixed",
+        width: (isHorizontal ? node.primaryAxisSizingMode : node.counterAxisSizingMode) === "AUTO" ? "hug" : "fixed",
+        height: (isHorizontal ? node.counterAxisSizingMode : node.primaryAxisSizingMode) === "AUTO" ? "hug" : "fixed",
       },
     });
   }

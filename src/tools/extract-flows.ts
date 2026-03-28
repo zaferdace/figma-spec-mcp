@@ -39,22 +39,28 @@ function collectFlowEdges(
   nodes: Map<string, FigmaNode>,
   nodeToFrame: Map<string, FigmaNode>,
   seen: Set<string>,
-  flows: FlowConnection[]
+  flows: FlowConnection[],
+  warnings: string[]
 ): void {
   if (node.transitionNodeID) {
     const fromFrame = nodeToFrame.get(node.id);
     const targetNode = nodes.get(node.transitionNodeID);
     const toFrame = targetNode ? nodeToFrame.get(targetNode.id) ?? targetNode : undefined;
 
-    if (fromFrame && toFrame) {
-      const key = `${fromFrame.id}->${toFrame.id}:${node.id}`;
+    if (fromFrame) {
+      const toNodeId = toFrame?.id ?? node.transitionNodeID;
+      const toNodeName = toFrame?.name ?? "unknown (outside subtree)";
+      const key = `${fromFrame.id}->${toNodeId}:${node.id}`;
       if (!seen.has(key)) {
         seen.add(key);
+        if (!toFrame) {
+          warnings.push(`Flow target ${node.transitionNodeID} is outside the scanned subtree`);
+        }
         flows.push({
           fromNodeId: fromFrame.id,
           fromNodeName: fromFrame.name,
-          toNodeId: toFrame.id,
-          toNodeName: toFrame.name,
+          toNodeId,
+          toNodeName,
           trigger: node.name,
           transitionType: node.transitionDuration !== undefined || node.transitionEasing ? "animated" : "instant",
         });
@@ -62,7 +68,7 @@ function collectFlowEdges(
     }
   }
 
-  node.children?.forEach((child) => collectFlowEdges(child, nodes, nodeToFrame, seen, flows));
+  node.children?.forEach((child) => collectFlowEdges(child, nodes, nodeToFrame, seen, flows, warnings));
 }
 
 function topoSortFrameIds(frameIds: string[], flows: FlowConnection[]): string[] {
@@ -139,13 +145,14 @@ export async function extractFlows(
   buildNodeIndex(root, null, nodes, frames, nodeToFrame);
 
   const flows: FlowConnection[] = [];
-  collectFlowEdges(root, nodes, nodeToFrame, new Set<string>(), flows);
+  const warnings: string[] = [];
+  collectFlowEdges(root, nodes, nodeToFrame, new Set<string>(), flows, warnings);
 
   return {
     schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key, node_id: input.node_id },
     freshness: buildFreshness(response.cache),
-    warnings: [],
+    warnings,
     data: {
       flows,
       flowOrder: topoSortFrameIds(Array.from(frames.keys()), flows),

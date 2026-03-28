@@ -128,7 +128,7 @@ export async function diffVersions(
     schema_version: SCHEMA_VERSION,
     source: { file_key: input.file_key },
     freshness: {
-      cached: buildFreshness(versionAResponse.cache).cached && buildFreshness(versionBResponse.cache).cached,
+      fresh: buildFreshness(versionAResponse.cache).fresh && buildFreshness(versionBResponse.cache).fresh,
       timestamp: versionBResponse.cache.cachedAt,
       ttl_ms: Math.min(buildFreshness(versionAResponse.cache).ttl_ms, buildFreshness(versionBResponse.cache).ttl_ms),
     },

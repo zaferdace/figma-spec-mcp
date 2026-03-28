@@ -1,12 +1,12 @@
 # figma-spec
 
-![Status: Early Development](https://img.shields.io/badge/status-early%20development-orange)
+![Version: 0.4.0](https://img.shields.io/badge/version-0.4.0-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
-**An MCP server for AI agents that reads Figma files and returns structured, versioned specs — layout facts, design tokens, and Unity UGUI mappings. It does not generate UI code or infer semantic component roles.**
+**An MCP server for AI agents that reads Figma files and returns structured, versioned specs for layout inspection, design extraction, accessibility review, prototype analysis, and platform handoff workflows.**
 
-`figma-spec` gives AI agents (Claude, Cursor, etc.) deterministic access to Figma files: layout data, extracted design tokens, and Unity UGUI hierarchies, with a built-in disk cache to avoid Figma API rate limits.
+`figma-spec` gives AI agents deterministic access to Figma files with a built-in disk cache to reduce repeat API calls and keep tool output stable for downstream automation.
 
 > **Security note:** Your Figma access token is passed as a tool argument. Never commit it to version control. Use environment variables or your AI client's secret management to supply it at runtime.
 
@@ -37,161 +37,76 @@ Your file key is in the Figma URL: `figma.com/file/<FILE_KEY>/...`
 
 ## Why figma-spec?
 
-Most Figma MCP tools just forward raw API responses. `figma-spec` does the engineering work:
+Most Figma MCP tools forward raw API responses. `figma-spec` adds stable envelopes, focused derivations, and reusable engineering outputs:
 
-- **Deterministic output** — versioned JSON schemas (`figma-spec/inspect-layout@1`) with stable field contracts
-- **Built-in disk cache** — responses cached by file key + node ID with a 1-hour TTL; cache freshness reported in every response. No more 429s from repeated queries (a known pain point with GLips/Framelink)
-- **Confidence scores** — inferred fields (Unity component suggestions) are marked with `"confidence": "high" | "medium" | "low"`
-- **Source traceability** — every design token includes `sourceNodeIds` pointing back to where it was found
+- Deterministic JSON responses with a shared response envelope
+- Built-in disk cache with freshness metadata on every result
+- Source traceability for tokens, mappings, and extracted relationships
+- Platform-ready outputs for Unity, codebase mapping, and image export workflows
 
 ---
 
 ## Tools
 
-### `inspect_layout`
-
-Returns deterministic layout data for a Figma frame: node hierarchy, auto-layout vs absolute positioning, spacing/padding/constraints, and accessibility warnings.
-
-**Input:**
-```json
-{
-  "file_key": "abc123",
-  "node_id": "1:23",
-  "access_token": "figd_..."
-}
-```
-
-**Output:**
-```json
-{
-  "schema": "figma-spec/inspect-layout@1",
-  "frameId": "1:23",
-  "frameName": "HomeScreen",
-  "dimensions": { "width": 390, "height": 844 },
-  "hierarchy": [
-    { "id": "1:23", "name": "HomeScreen", "type": "FRAME", "depth": 0, "childCount": 4, "positioningMode": "auto-layout" },
-    { "id": "1:24", "name": "Header", "type": "FRAME", "depth": 1, "childCount": 2, "positioningMode": "auto-layout" }
-  ],
-  "autoLayouts": [
-    {
-      "nodeId": "1:23",
-      "mode": "vertical",
-      "padding": { "top": 16, "right": 16, "bottom": 16, "left": 16 },
-      "gap": 12,
-      "sizing": { "width": "fixed", "height": "fixed" }
-    }
-  ],
-  "constraints": [
-    { "nodeId": "1:24", "horizontal": "LEFT_RIGHT", "vertical": "TOP", "bounds": { "x": 0, "y": 0, "width": 390, "height": 56 } }
-  ],
-  "accessibilityWarnings": [
-    { "nodeId": "1:31", "rule": "min-font-size", "severity": "warning", "message": "Font size 10px is below the recommended minimum of 11px.", "evidence": "fontSize=10" }
-  ],
-  "stats": { "totalNodes": 22, "autoLayoutNodes": 6, "absoluteNodes": 16, "textNodeCount": 5 },
-  "cache": { "cachedAt": "2026-03-26T10:00:00.000Z", "expiresAt": "2026-03-26T11:00:00.000Z", "fresh": true }
-}
-```
+- `inspect_layout` — Inspects a Figma frame and returns hierarchy, layout structure, spacing, constraints, annotations, and basic accessibility warnings.
+- `extract_design_tokens` — Extracts color, typography, and spacing tokens from a Figma file and exports them as CSS variables, Style Dictionary JSON, or Tailwind config.
+- `map_to_unity` — Produces a Unity UGUI-oriented mapping with RectTransform data, layout groups, suggested components, notes, and warnings.
+- `resolve_components` — Resolves instance nodes to their backing component definitions and returns source file and source node references.
+- `extract_flows` — Extracts prototype transitions from a page or frame and returns directed flow connections plus a deterministic frame order.
+- `bridge_to_codebase` — Scans a local project and maps Figma component names to likely implementation files using filename heuristics.
+- `diff_versions` — Compares two Figma file versions and reports added, removed, and modified nodes.
+- `extract_variants` — Reads a component set and returns structured variant metadata, parsed properties, dimensions, layout details, fills, and typography.
+- `export_images` — Exports one or more Figma nodes as PNG, JPG, SVG, or PDF and returns the image URLs.
+- `audit_accessibility` — Audits a frame for accessibility issues such as contrast, touch targets, font size, missing alt text, and color-only distinctions.
+- `simplify_context` — Produces a token-efficient, LLM-oriented summary tree by collapsing wrappers, grouping repeated nodes, and truncating deep hierarchies.
 
 ---
 
-### `extract_design_tokens`
+## Features
 
-Extracts colors, typography, and spacing from an entire Figma file and exports them in your chosen format. Every token includes `sourceNodeIds` for traceability. Spacing tokens are derived from auto-layout `padding` and `itemSpacing` values — they are not named Figma styles.
+### v0.2
 
-**Input:**
-```json
-{
-  "file_key": "abc123",
-  "access_token": "figd_...",
-  "export_format": "css-variables"
-}
-```
+- Added component resolution, prototype flow extraction, and codebase bridging tools
+- Added version diffing and variant extraction workflows
 
-**Export formats:** `css-variables` | `style-dictionary` | `tailwind`
+### v0.3
 
-**Example CSS output:**
-```css
-:root {
-  --color-1a73e8: rgba(26, 115, 232, 1.00);
-  --color-ffffff: rgba(255, 255, 255, 1.00);
-  --text-inter-16-family: "Inter";
-  --text-inter-16-size: 16px;
-  --text-inter-16-weight: 400;
-  --spacing-8: 8px;
-  --spacing-16: 16px;
-  --spacing-24: 24px;
-}
-```
+- Added image export and accessibility auditing tools
+- Expanded analysis beyond layout and tokens into QA and asset workflows
+
+### v0.4
+
+- Added `simplify_context` for LLM-friendly frame summaries
+- Unified tools around a shared response envelope with schema versioning and freshness metadata
+- Shipped as `figma-spec` version `0.4.0`
 
 ---
 
-### `map_to_unity`
+## Response Shape
 
-Converts a Figma frame into a Unity UGUI hierarchy with RectTransform values, LayoutGroup configs, and suggested components per node.
+All 11 tools return a consistent top-level envelope:
 
-**Input:**
 ```json
 {
-  "file_key": "abc123",
-  "node_id": "1:23",
-  "access_token": "figd_...",
-  "canvas_width": 1080,
-  "canvas_height": 1920
-}
-```
-
-**Output:**
-```json
-{
-  "schema": "figma-spec/map-to-unity@1",
-  "rootNode": {
-    "name": "HomeScreen",
-    "figmaId": "1:23",
-    "figmaType": "FRAME",
-    "rectTransform": {
-      "anchorMin": { "x": 0, "y": 0 },
-      "anchorMax": { "x": 1, "y": 1 },
-      "anchoredPosition": { "x": 0, "y": 0 },
-      "sizeDelta": { "x": 0, "y": 0 },
-      "pivot": { "x": 0.5, "y": 0.5 }
-    },
-    "layoutGroup": {
-      "type": "VerticalLayoutGroup",
-      "spacing": 12,
-      "padding": { "top": 16, "right": 16, "bottom": 16, "left": 16 },
-      "childAlignment": "UpperLeft",
-      "controlWidth": false,
-      "controlHeight": false
-    },
-    "suggestedComponents": ["RectTransform", "Image", "VerticalLayoutGroup"],
-    "confidence": "high",
-    "children": []
+  "schema_version": "0.1.0",
+  "source": { "file_key": "abc123", "node_id": "1:23" },
+  "freshness": {
+    "fresh": true,
+    "timestamp": "2026-03-26T10:00:00.000Z",
+    "ttl_ms": 3600000
   },
-  "canvasSize": { "width": 1080, "height": 1920 },
-  "notes": ["\"Icon\" (VECTOR) — export as sprite for Unity Image component."],
-  "warnings": ["\"BlurPanel\" has blur effects — Unity UGUI does not natively support blur."],
-  "cache": { "cachedAt": "2026-03-26T10:00:00.000Z", "fresh": true }
+  "warnings": [],
+  "data": {}
 }
 ```
 
-**Constraint → Anchor mapping:**
-
-| Figma | Unity anchorMin/Max |
-|-------|---------------------|
-| Left | `(0,x) → (0,x)` |
-| Right | `(1,x) → (1,x)` |
-| Center H | `(0.5,x) → (0.5,x)` |
-| Left & Right | `(0,x) → (1,x)` stretch |
-| Top | `(x,1) → (x,1)` |
-| Bottom | `(x,0) → (x,0)` |
-| Top & Bottom | `(x,0) → (x,1)` stretch |
-| Scale | stretch both axes |
+Tool-specific results live in `data`, and most tools also include low-level cache metadata there.
 
 ---
 
 ## Caching
 
-Responses are cached to disk (default: `$TMPDIR/figma-spec-cache/`) by file key + node ID with a 1-hour TTL. Every response includes a `cache` field:
+Responses are cached to disk (default: `$TMPDIR/figma-spec-cache/`) by file key and request shape with a 1-hour TTL. Cache metadata is included in responses:
 
 ```json
 "cache": {
@@ -222,8 +137,8 @@ node dist/index.js
 - [ ] Component variant mapping
 - [ ] Export to React Native StyleSheet
 - [ ] Export to Flutter ThemeData
-- [ ] WCAG contrast ratio checks
-- [ ] Cache invalidation by file version
+- [ ] Deeper accessibility heuristics and remediation guidance
+- [ ] Smarter cache invalidation by file version
 
 ---
 

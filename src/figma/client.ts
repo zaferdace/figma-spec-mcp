@@ -196,22 +196,23 @@ export class FigmaClient {
     fileKey: string,
     nodeIds: string[],
     fileVersion?: string
-  ): Promise<CachedResult<{ nodes: Record<string, { document: FigmaNode }> }>> {
+  ): Promise<CachedResult<{ nodes: Record<string, { document: FigmaNode } | null> }>> {
     const key = this.getFileNodesCacheKey(fileKey, nodeIds, fileVersion);
-    const cached = this.readCache<{ nodes: Record<string, { document: FigmaNode }> }>(key);
+    const cached = this.readCache<{ nodes: Record<string, { document: FigmaNode } | null> }>(key);
 
     if (cached && Date.now() < cached.expiresAt) {
       return { data: cached.data, cache: this.buildCacheMetadata(cached) };
     }
 
     const ids = nodeIds.join(",");
-    const data = await this.request<{ nodes: Record<string, { document: FigmaNode }> }>(
-      `/files/${fileKey}/nodes?ids=${encodeURIComponent(ids)}`
+    const versionParam = fileVersion ? `&version=${encodeURIComponent(fileVersion)}` : "";
+    const data = await this.request<{ nodes: Record<string, { document: FigmaNode } | null> }>(
+      `/files/${fileKey}/nodes?ids=${encodeURIComponent(ids)}${versionParam}`
     );
 
     const version = fileVersion ?? "unknown";
     this.writeCache(key, data, version);
-    const entry = this.readCache<{ nodes: Record<string, { document: FigmaNode }> }>(key);
+    const entry = this.readCache<{ nodes: Record<string, { document: FigmaNode } | null> }>(key);
     const cache = entry ? this.buildCacheMetadata(entry) : this.buildFreshMetadata(version);
     return { data, cache };
   }

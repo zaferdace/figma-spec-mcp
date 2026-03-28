@@ -75,8 +75,8 @@ export async function resolveComponents(
       }
 
       componentDetails.set(componentKey, {
-        file_key: componentResponse.data.file_key,
-        node_id: componentResponse.data.node_id,
+        file_key: componentResponse.data.meta.file_key,
+        node_id: componentResponse.data.meta.node_id,
       });
     });
   }
