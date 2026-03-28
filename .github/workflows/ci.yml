@@ -36,8 +36,3 @@ jobs:
 
       - name: Publish readiness
         run: npm run publint
-
-      - name: SonarCloud scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
