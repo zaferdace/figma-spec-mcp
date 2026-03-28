@@ -1,0 +1,4 @@
+rule_settings:
+  ignore:
+    - id: "license-blueoak-1.0.0"
+      reason: "BlueOak-1.0.0 is a permissive open-source license (MIT-equivalent). Only in devDependencies (eslint/minimatch), not shipped to users."
