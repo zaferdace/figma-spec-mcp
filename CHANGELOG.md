@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.2] - 2026-03-28
+
+### Fixed
+- resolve_components: graceful handling for external library components (404 → warning)
+- CI pipeline: removed duplicate SonarCloud step, simplified to `npm run check`
+- Sourcery AI feedback applied
+
+### Tested
+- All 11 tools verified against real Figma files (10 pass, 1 skip — no component set in test files)
+
 ## [1.0.0-beta.1] - 2026-03-28
 
 ### Added
