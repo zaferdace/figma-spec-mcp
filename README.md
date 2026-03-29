@@ -8,11 +8,26 @@
   <img src="assets/banner.png" alt="figma-spec-mcp — Bridge Figma to Game Engines" width="720" />
 </p>
 
-**Engineering-grade Figma specs for AI agents.** Layout audit, design tokens, accessibility checks, prototype flows, version diffs, and platform-ready mapping for Unity, React, SwiftUI, and more — all through MCP.
+**Bridge Figma to any platform — Unity UGUI mappings built-in, structured output for React, Flutter, SwiftUI, and more.** Layout audit, design tokens, accessibility checks, prototype flows, version diffs, and platform-ready specs — all through MCP.
 
 Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, VS Code + Copilot, Windsurf, Cline, Continue.dev, Zed.
 
 > **Security note:** Your Figma access token is passed as a tool argument. Never commit it to version control. Use environment variables or your AI client's secret management to supply it at runtime.
+
+---
+
+## Platform Support
+
+| Platform | What you get |
+|----------|-------------|
+| **Unity** | `map_to_unity` — RectTransform data, layout groups, anchoring, UGUI component mapping |
+| **React / React Native** | `extract_design_tokens` → CSS variables, `inspect_layout` → flex structure with framework hints |
+| **Flutter** | `extract_design_tokens` → Style Dictionary JSON, layout hierarchy for Widget mapping |
+| **SwiftUI** | `inspect_layout` with `framework: "swiftui"` hints, spacing/padding extraction |
+| **Tailwind CSS** | `extract_design_tokens` → Tailwind config export |
+| **Any platform** | `generate_implementation_contract` → structured spec with scope, assets, states, and acceptance criteria |
+
+Your AI agent reads the structured output and generates platform-specific code. No manual translation needed.
 
 ---
 
@@ -155,8 +170,9 @@ node dist/index.js
 
 ## Roadmap
 
-- [ ] Export to React Native StyleSheet
-- [ ] Export to Flutter ThemeData
+- [ ] `map_to_react` — React/React Native component mapping with props and StyleSheet
+- [ ] `map_to_flutter` — Flutter Widget tree mapping with ThemeData export
+- [ ] `map_to_swiftui` — SwiftUI view mapping with layout modifiers
 - [ ] Semantic component detection (button/card/nav inference)
 - [ ] Webhook-triggered spec generation
 - [ ] Plugin API companion for live document access

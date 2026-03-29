@@ -1,19 +1,31 @@
 {
   "name": "figma-spec-mcp",
   "version": "1.0.0-beta.3",
-  "description": "MCP server for Figma — layout audit, design tokens, accessibility, Unity mapping, and AI-optimized specs",
+  "description": "Bridge Figma to any platform — Unity UGUI mappings, design tokens for React/Flutter/SwiftUI/Tailwind, accessibility audits, and AI-optimized specs through MCP",
   "keywords": [
     "figma",
     "mcp",
     "model-context-protocol",
     "design-tokens",
     "unity",
+    "react",
+    "react-native",
+    "flutter",
+    "swiftui",
+    "tailwind",
+    "figma-to-code",
+    "figma-to-unity",
+    "figma-to-react",
+    "figma-to-flutter",
     "layout-audit",
+    "accessibility",
     "ai-agents",
     "design-system",
     "ai",
     "claude",
-    "cursor"
+    "cursor",
+    "game-development",
+    "mobile-development"
   ],
   "homepage": "https://github.com/zaferdace/figma-spec-mcp",
   "bugs": {
