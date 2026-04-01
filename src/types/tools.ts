@@ -550,3 +550,66 @@ export interface FlowToTestCasesData {
 }
 
 export type FlowToTestCasesResult = ResponseEnvelope<FlowToTestCasesData>;
+
+// ─── map_to_react ────────────────────────────────────────────────────────────
+
+export interface MapToReactInput {
+  access_token: string;
+  file_key: string;
+  node_id: string;
+  style_format: "tailwind" | "css_modules" | "styled_components" | "inline";
+  component_library: "shadcn" | "mui" | "chakra" | "radix" | "plain";
+  include_assets: boolean;
+  include_prop_types: boolean;
+  max_depth: number;
+}
+
+export interface ReactNode {
+  element: string;
+  componentSuggestion?: ComponentSuggestion;
+  className?: string;
+  style?: Record<string, string | number>;
+  cssRule?: { selector: string; properties: Record<string, string> };
+  text?: string;
+  children: ReactNode[];
+  figmaNodeName: string;
+  figmaId: string;
+  notes: string[];
+}
+
+export interface ComponentSuggestion {
+  library: string;
+  component: string;
+  props?: Record<string, string>;
+  import?: string;
+}
+
+export interface AssetHint {
+  figmaId: string;
+  suggestedName: string;
+  suggestedFormat: "svg" | "png";
+  dimensions: { width: number; height: number };
+}
+
+export interface PropTypeDefinition {
+  componentName: string;
+  props: Array<{
+    name: string;
+    type: string;
+    required: boolean;
+    defaultValue?: string;
+  }>;
+  typescript: string;
+}
+
+export interface MapToReactData {
+  rootNode: ReactNode;
+  style_format: string;
+  component_library: string;
+  assets: AssetHint[];
+  propTypes: PropTypeDefinition[];
+  notes: string[];
+  cache: CacheMetadata;
+}
+
+export type MapToReactResult = ResponseEnvelope<MapToReactData>;
