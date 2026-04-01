@@ -1,6 +1,6 @@
 # figma-spec-mcp
 
-![Version: 1.0.0-beta.3](https://img.shields.io/badge/version-1.0.0--beta.3-orange)
+![Version: 1.0.0-beta.4](https://img.shields.io/badge/version-1.0.0--beta.4-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen)
 
@@ -21,7 +21,8 @@ Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, V
 | Platform | What you get |
 |----------|-------------|
 | **Unity** | `map_to_unity` — RectTransform data, layout groups, anchoring, UGUI component mapping |
-| **React / React Native** | `extract_design_tokens` → CSS variables, `inspect_layout` → flex structure with framework hints |
+| **React** | `map_to_react` — JSX tree, Tailwind/CSS classes, shadcn/MUI/Chakra/Radix component mapping, TypeScript props |
+| **React Native** | `map_to_react` (inline style format) + `extract_design_tokens` → CSS variables |
 | **Flutter** | `extract_design_tokens` → Style Dictionary JSON, layout hierarchy for Widget mapping |
 | **SwiftUI** | `inspect_layout` with `framework: "swiftui"` hints, spacing/padding extraction |
 | **Tailwind CSS** | `extract_design_tokens` → Tailwind config export |
@@ -69,6 +70,7 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 
 - `inspect_layout` — Inspects a Figma frame and returns hierarchy, layout structure, spacing, constraints, annotations, and basic accessibility warnings.
 - `extract_design_tokens` — Extracts color, typography, and spacing tokens from a Figma file and exports them as CSS variables, Style Dictionary JSON, or Tailwind config.
+- `map_to_react` — Maps a Figma frame to a React component tree with Tailwind/CSS classes, component library suggestions (shadcn, MUI, Chakra, Radix), asset hints, and TypeScript prop interfaces from variants.
 - `map_to_unity` — Produces a Unity UGUI-oriented mapping with RectTransform data, layout groups, suggested components, notes, and warnings.
 - `resolve_components` — Resolves instance nodes to their backing component definitions and returns source file and source node references.
 - `extract_flows` — Extracts prototype transitions from a page or frame and returns directed flow connections plus a deterministic frame order.
@@ -117,11 +119,15 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 - `extract_missing_states` — component state coverage analysis
 - `flow_to_test_cases` — prototype flows → QA test scenarios
 
+### v0.6 — React & Platform AST
+- `map_to_react` — Figma → React component tree with 4 style formats and 5 component libraries
+- Normalized UI AST foundation — shared platform-agnostic tree for future mappers (Flutter, SwiftUI, React Native)
+
 ---
 
 ## Response Shape
 
-All 15 tools return a consistent top-level envelope:
+All 16 tools return a consistent top-level envelope:
 
 ```json
 {
@@ -170,12 +176,12 @@ node dist/index.js
 
 ## Roadmap
 
-- [ ] `map_to_react` — React/React Native component mapping with props and StyleSheet
+- [x] `map_to_react` — React component tree with Tailwind/CSS, component library mapping, TypeScript props
+- [ ] `map_to_react_native` — React Native mapping (reuses normalized UI AST)
 - [ ] `map_to_flutter` — Flutter Widget tree mapping with ThemeData export
 - [ ] `map_to_swiftui` — SwiftUI view mapping with layout modifiers
-- [ ] Semantic component detection (button/card/nav inference)
+- [ ] `detect_design_drift` — Compare Figma design against codebase implementation
 - [ ] Webhook-triggered spec generation
-- [ ] Plugin API companion for live document access
 
 ---
 
