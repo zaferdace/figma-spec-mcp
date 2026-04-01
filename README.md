@@ -22,9 +22,9 @@ Works with **any MCP-compatible client**: Claude Code, Claude Desktop, Cursor, V
 |----------|-------------|
 | **Unity** | `map_to_unity` — RectTransform data, layout groups, anchoring, UGUI component mapping |
 | **React** | `map_to_react` — JSX tree, Tailwind/CSS classes, shadcn/MUI/Chakra/Radix component mapping, TypeScript props |
-| **React Native** | `map_to_react` (inline style format) + `extract_design_tokens` → CSS variables |
-| **Flutter** | `extract_design_tokens` → Style Dictionary JSON, layout hierarchy for Widget mapping |
-| **SwiftUI** | `inspect_layout` with `framework: "swiftui"` hints, spacing/padding extraction |
+| **React Native** | `map_to_react_native` — View/Text/TouchableOpacity, StyleSheet, React Native Paper/NativeBase mapping |
+| **Flutter** | `map_to_flutter` — Widget tree, Material/Cupertino components, ThemeData extraction |
+| **SwiftUI** | `map_to_swiftui` — VStack/HStack/ZStack, modifier chains, Color asset extraction |
 | **Tailwind CSS** | `extract_design_tokens` → Tailwind config export |
 | **Any platform** | `generate_implementation_contract` → structured spec with scope, assets, states, and acceptance criteria |
 
@@ -71,6 +71,9 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 - `inspect_layout` — Inspects a Figma frame and returns hierarchy, layout structure, spacing, constraints, annotations, and basic accessibility warnings.
 - `extract_design_tokens` — Extracts color, typography, and spacing tokens from a Figma file and exports them as CSS variables, Style Dictionary JSON, or Tailwind config.
 - `map_to_react` — Maps a Figma frame to a React component tree with Tailwind/CSS classes, component library suggestions (shadcn, MUI, Chakra, Radix), asset hints, and TypeScript prop interfaces from variants.
+- `map_to_react_native` — Maps a Figma frame to React Native components (View, Text, TouchableOpacity, TextInput) with StyleSheet output and React Native Paper/NativeBase library mapping.
+- `map_to_flutter` — Maps a Figma frame to a Flutter Widget tree (Container, Column, Row, Stack) with Material/Cupertino component mapping and ThemeData extraction.
+- `map_to_swiftui` — Maps a Figma frame to SwiftUI views (VStack, HStack, ZStack) with modifier chains and Color asset extraction.
 - `map_to_unity` — Produces a Unity UGUI-oriented mapping with RectTransform data, layout groups, suggested components, notes, and warnings.
 - `resolve_components` — Resolves instance nodes to their backing component definitions and returns source file and source node references.
 - `extract_flows` — Extracts prototype transitions from a page or frame and returns directed flow connections plus a deterministic frame order.
@@ -119,15 +122,18 @@ Most Figma MCP tools forward raw API responses. `figma-spec-mcp` adds stable env
 - `extract_missing_states` — component state coverage analysis
 - `flow_to_test_cases` — prototype flows → QA test scenarios
 
-### v0.6 — React & Platform AST
-- `map_to_react` — Figma → React component tree with 4 style formats and 5 component libraries
-- Normalized UI AST foundation — shared platform-agnostic tree for future mappers (Flutter, SwiftUI, React Native)
+### v0.6 — Multi-Platform Mappers
+- `map_to_react` — Figma → React with Tailwind/CSS, shadcn/MUI/Chakra/Radix, TypeScript props
+- `map_to_react_native` — Figma → React Native with StyleSheet, Paper/NativeBase component mapping
+- `map_to_flutter` — Figma → Flutter Widget tree with Material/Cupertino, ThemeData extraction
+- `map_to_swiftui` — Figma → SwiftUI with modifier chains, Color asset extraction
+- Normalized UI AST foundation — shared platform-agnostic tree powering all 4 platform mappers
 
 ---
 
 ## Response Shape
 
-All 16 tools return a consistent top-level envelope:
+All 19 tools return a consistent top-level envelope:
 
 ```json
 {
@@ -177,10 +183,12 @@ node dist/index.js
 ## Roadmap
 
 - [x] `map_to_react` — React component tree with Tailwind/CSS, component library mapping, TypeScript props
-- [ ] `map_to_react_native` — React Native mapping (reuses normalized UI AST)
-- [ ] `map_to_flutter` — Flutter Widget tree mapping with ThemeData export
-- [ ] `map_to_swiftui` — SwiftUI view mapping with layout modifiers
+- [x] `map_to_react_native` — React Native with StyleSheet, Paper/NativeBase mapping
+- [x] `map_to_flutter` — Flutter Widget tree with Material/Cupertino, ThemeData
+- [x] `map_to_swiftui` — SwiftUI views with modifier chains, Color assets
 - [ ] `detect_design_drift` — Compare Figma design against codebase implementation
+- [ ] `map_to_unreal_umg` — Unreal Engine UMG widget mapping
+- [ ] `map_to_godot_control` — Godot Control node mapping
 - [ ] Webhook-triggered spec generation
 
 ---

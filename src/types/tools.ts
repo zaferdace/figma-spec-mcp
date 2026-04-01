@@ -613,3 +613,115 @@ export interface MapToReactData {
 }
 
 export type MapToReactResult = ResponseEnvelope<MapToReactData>;
+
+// ─── map_to_react_native ─────────────────────────────────────────────────────
+
+export interface MapToReactNativeInput {
+  access_token: string;
+  file_key: string;
+  node_id: string;
+  component_library: "react_native_paper" | "native_base" | "plain";
+  include_assets: boolean;
+  include_prop_types: boolean;
+  max_depth: number;
+}
+
+export interface ReactNativeNode {
+  element: string;
+  componentSuggestion?: ComponentSuggestion;
+  style: Record<string, string | number | { width: number; height: number }>;
+  text?: string;
+  children: ReactNativeNode[];
+  figmaNodeName: string;
+  figmaId: string;
+  notes: string[];
+}
+
+export interface MapToReactNativeData {
+  rootNode: ReactNativeNode;
+  component_library: string;
+  assets: AssetHint[];
+  propTypes: PropTypeDefinition[];
+  notes: string[];
+  cache: CacheMetadata;
+}
+
+export type MapToReactNativeResult = ResponseEnvelope<MapToReactNativeData>;
+
+// ─── map_to_flutter ──────────────────────────────────────────────────────────
+
+export interface MapToFlutterInput {
+  access_token: string;
+  file_key: string;
+  node_id: string;
+  component_library: "material" | "cupertino" | "plain";
+  include_assets: boolean;
+  include_theme_data: boolean;
+  max_depth: number;
+}
+
+export interface FlutterNode {
+  widget: string;
+  componentSuggestion?: ComponentSuggestion;
+  properties: Record<string, string>;
+  text?: string;
+  children: FlutterNode[];
+  figmaNodeName: string;
+  figmaId: string;
+  notes: string[];
+}
+
+export interface FlutterThemeData {
+  colors: string[];
+  fontFamilies: string[];
+  fontSizes: number[];
+  themeData: string;
+}
+
+export interface MapToFlutterData {
+  rootNode: FlutterNode;
+  component_library: string;
+  assets: AssetHint[];
+  theme?: FlutterThemeData;
+  notes: string[];
+  cache: CacheMetadata;
+}
+
+export type MapToFlutterResult = ResponseEnvelope<MapToFlutterData>;
+
+// ─── map_to_swiftui ──────────────────────────────────────────────────────────
+
+export interface MapToSwiftUIInput {
+  access_token: string;
+  file_key: string;
+  node_id: string;
+  include_assets: boolean;
+  include_color_assets: boolean;
+  max_depth: number;
+}
+
+export interface SwiftUINode {
+  view: string;
+  modifiers: string[];
+  text?: string;
+  children: SwiftUINode[];
+  figmaNodeName: string;
+  figmaId: string;
+  notes: string[];
+}
+
+export interface SwiftUIColorAsset {
+  name: string;
+  hex: string;
+  swift: string;
+}
+
+export interface MapToSwiftUIData {
+  rootNode: SwiftUINode;
+  assets: AssetHint[];
+  colorAssets: SwiftUIColorAsset[];
+  notes: string[];
+  cache: CacheMetadata;
+}
+
+export type MapToSwiftUIResult = ResponseEnvelope<MapToSwiftUIData>;
