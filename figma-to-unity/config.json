@@ -1,0 +1,6 @@
+{
+  "groupAsImage": {
+    "enabled": true,
+    "minNonTextChildren": 1
+  }
+}

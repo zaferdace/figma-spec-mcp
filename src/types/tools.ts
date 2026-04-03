@@ -171,6 +171,17 @@ export interface UnityLayoutGroup {
   controlHeight: boolean;
 }
 
+export interface UnityExtractedText {
+  name: string;
+  content: string;
+  position: { x: number; y: number; width: number; height: number };
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: number;
+  color: string;
+  alignment: { horizontal: string; vertical: string };
+}
+
 export interface UnityNode {
   name: string;
   figmaId: string;
@@ -179,6 +190,8 @@ export interface UnityNode {
   layoutGroup: UnityLayoutGroup | undefined;
   suggestedComponents: string[];
   confidence: "high" | "medium" | "low";
+  exportAsImage?: boolean | undefined;
+  extractedTexts?: UnityExtractedText[] | undefined;
   children: UnityNode[];
 }
 

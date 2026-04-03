@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { FigmaClient } from "../figma/client.js";
 import { buildFreshness, SCHEMA_VERSION } from "../shared.js";
 import type { FigmaNode } from "../types/figma.js";
@@ -8,6 +10,7 @@ import type {
   UnityNode,
   UnityRectTransform,
   UnityLayoutGroup,
+  UnityExtractedText,
 } from "../types/tools.js";
 import { registerTool } from "./registry.js";
 
@@ -118,9 +121,48 @@ function buildLayoutGroup(node: FigmaNode): UnityLayoutGroup | undefined {
 
 type ConfidenceLevel = "high" | "medium" | "low";
 
-function inferComponents(node: FigmaNode): { components: string[]; confidence: ConfidenceLevel } {
+interface GroupAsImageConfig {
+  enabled: boolean;
+  minNonTextChildren: number;
+}
+
+const GROUP_AS_IMAGE_DEFAULTS: GroupAsImageConfig = {
+  enabled: true,
+  minNonTextChildren: 1,
+};
+
+function loadGroupAsImageConfig(): GroupAsImageConfig {
+  const configPath = resolve(process.cwd(), "figma-to-unity/config.json");
+
+  if (!existsSync(configPath)) return GROUP_AS_IMAGE_DEFAULTS;
+
+  try {
+    const parsed = JSON.parse(readFileSync(configPath, "utf-8")) as {
+      groupAsImage?: Partial<GroupAsImageConfig>;
+    };
+
+    return {
+      enabled: parsed.groupAsImage?.enabled ?? GROUP_AS_IMAGE_DEFAULTS.enabled,
+      minNonTextChildren: parsed.groupAsImage?.minNonTextChildren ?? GROUP_AS_IMAGE_DEFAULTS.minNonTextChildren,
+    };
+  } catch {
+    return GROUP_AS_IMAGE_DEFAULTS;
+  }
+}
+
+const groupAsImageConfig = loadGroupAsImageConfig();
+
+function inferComponents(
+  node: FigmaNode,
+  exportAsImage = false
+): { components: string[]; confidence: ConfidenceLevel } {
   const components: string[] = ["RectTransform"];
   let confidence: ConfidenceLevel = "high";
+
+  if (exportAsImage) {
+    components.push("Image");
+    return { components, confidence };
+  }
 
   switch (node.type) {
     case "TEXT":
@@ -150,6 +192,65 @@ function inferComponents(node: FigmaNode): { components: string[]; confidence: C
   return { components, confidence };
 }
 
+function clampColorChannel(value: number | undefined): number {
+  return Math.max(0, Math.min(255, Math.round((value ?? 0) * 255)));
+}
+
+function toHex(value: number): string {
+  return value.toString(16).padStart(2, "0").toUpperCase();
+}
+
+function getTextColor(node: FigmaNode): string {
+  const solidFill = node.fills?.find((fill) => fill.visible !== false && fill.type === "SOLID" && fill.color);
+
+  if (!solidFill?.color) return "#000000";
+
+  const alpha = solidFill.opacity ?? solidFill.color.a ?? 1;
+  const hex = `#${toHex(clampColorChannel(solidFill.color.r))}${toHex(clampColorChannel(solidFill.color.g))}${toHex(
+    clampColorChannel(solidFill.color.b)
+  )}`;
+
+  return alpha >= 1 ? hex : `${hex}${toHex(Math.max(0, Math.min(255, Math.round(alpha * 255))))}`;
+}
+
+function extractText(
+  node: FigmaNode,
+  parentBounds: { x: number; y: number; width: number; height: number }
+): UnityExtractedText {
+  const bounds = node.absoluteBoundingBox ?? { x: parentBounds.x, y: parentBounds.y, width: 0, height: 0 };
+
+  return {
+    name: node.name,
+    content: node.characters ?? "",
+    position: {
+      x: Math.round(bounds.x - parentBounds.x),
+      y: Math.round(bounds.y - parentBounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height),
+    },
+    fontSize: Math.round(node.style?.fontSize ?? 16),
+    fontFamily: node.style?.fontFamily ?? "Arial",
+    fontWeight: node.style?.fontWeight ?? 400,
+    color: getTextColor(node),
+    alignment: {
+      horizontal: (node.style?.textAlignHorizontal ?? "LEFT").toLowerCase(),
+      vertical: (node.style?.textAlignVertical ?? "TOP").toLowerCase(),
+    },
+  };
+}
+
+function shouldExportGroupAsImage(node: FigmaNode): boolean {
+  if (!groupAsImageConfig.enabled) return false;
+  if (node.type !== "GROUP" && node.type !== "FRAME") return false;
+  if (node.layoutMode && node.layoutMode !== "NONE") return false;
+
+  const visibleChildren = (node.children ?? []).filter((child) => child.visible !== false);
+  const textChildren = visibleChildren.filter((child) => child.type === "TEXT");
+  const nonTextChildren = visibleChildren.filter((child) => child.type !== "TEXT");
+
+  return textChildren.length > 0 && nonTextChildren.length >= groupAsImageConfig.minNonTextChildren;
+}
+
 function mapNode(
   node: FigmaNode,
   parentBounds: { x: number; y: number; width: number; height: number } | null,
@@ -169,11 +270,29 @@ function mapNode(
     }
   }
 
+  const exportAsImage = shouldExportGroupAsImage(node);
   const rectTransform = buildRectTransform(node, parentBounds, canvasWidth, canvasHeight, warnings);
   const layoutGroup = buildLayoutGroup(node);
-  const { components: suggestedComponents, confidence } = inferComponents(node);
+  const { components: suggestedComponents, confidence } = inferComponents(node, exportAsImage);
 
-  const children: UnityNode[] = (node.children ?? []).map((child) =>
+  if (exportAsImage) {
+    notes.push(
+      `"${node.name}" (${node.type}) — export as a single PNG and recreate direct text children as TextMeshProUGUI.`
+    );
+  }
+
+  const textChildren = exportAsImage
+    ? (node.children ?? []).filter((child) => child.visible !== false && child.type === "TEXT")
+    : [];
+  const extractedTexts =
+    exportAsImage && node.absoluteBoundingBox
+      ? textChildren.map((child) =>
+          extractText(child, node.absoluteBoundingBox as NonNullable<FigmaNode["absoluteBoundingBox"]>)
+        )
+      : undefined;
+
+  const childNodes = exportAsImage ? textChildren : (node.children ?? []);
+  const children: UnityNode[] = childNodes.map((child) =>
     mapNode(child, node.absoluteBoundingBox ?? null, canvasWidth, canvasHeight, notes, warnings)
   );
 
@@ -185,6 +304,8 @@ function mapNode(
     layoutGroup,
     suggestedComponents,
     confidence,
+    exportAsImage: exportAsImage || undefined,
+    extractedTexts,
     children,
   };
 }
